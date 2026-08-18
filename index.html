@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supplever — המלאי שלי</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1F4A43">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Supplever">
+</head>
+<body>
+
+<header class="app-header">
+  <div>
+    <p class="app-title">Supplever</p>
+    <p class="app-sub">המלאי שלי</p>
+  </div>
+</header>
+
+<nav class="tabs wrap">
+  <button class="tab-btn active" id="tabDashboard" data-view="dashboard">המלאי שלי</button>
+  <button class="tab-btn" id="tabOrders" data-view="orders">
+    רשימת הזמנות
+    <span id="orderBadge" class="tab-badge" hidden>0</span>
+  </button>
+</nav>
+
+<main class="wrap">
+  <div id="notifyBanner" class="notify-banner" hidden>
+    <p>הפעילו התראות כדי לדעת מיד עם פתיחת האפליקציה אם יש תרופה שדורשת הזמנה</p>
+    <div class="notify-banner-actions">
+      <button id="enableNotifyBtn" class="btn-primary-sm">הפעלת התראות</button>
+      <button id="dismissNotifyBtn" class="btn-text-sm">לא עכשיו</button>
+    </div>
+  </div>
+
+  <section id="dashboardView" class="view">
+    <div id="emptyState" class="empty-state">
+      <p class="big">💊</p>
+      <p><strong>עדיין לא הוספתם תרופות</strong></p>
+      <p>לחצו על "הוספת תרופה" כדי להתחיל לעקוב אחרי המלאי</p>
+    </div>
+
+    <div id="medList" class="med-list"></div>
+  </section>
+
+  <section id="ordersView" class="view" hidden>
+    <div id="ordersEmptyState" class="empty-state">
+      <p class="big">✓</p>
+      <p><strong>הכל מעודכן</strong></p>
+      <p>אין כרגע תרופות שדורשות הזמנה</p>
+    </div>
+
+    <p id="ordersHint" class="field-hint" style="margin-bottom:14px;"></p>
+    <div id="orderList" class="med-list"></div>
+  </section>
+</main>
+
+<button id="addFab" class="fab">+ הוספת תרופה</button>
+
+<div id="modalOverlay" class="modal-overlay">
+  <div class="modal">
+    <h2 id="modalTitle">הוספת תרופה</h2>
+    <form id="medForm">
+      <div class="field">
+        <label for="name">שם התרופה</label>
+        <input type="text" id="name" name="name" required placeholder="לדוגמה: Omeprazole">
+      </div>
+      <div class="field">
+        <label for="dose">מינון (אופציונלי)</label>
+        <input type="text" id="dose" name="dose" placeholder="לדוגמה: 20 מ״ג">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="dailyRate">כדורים ביום</label>
+          <input type="number" id="dailyRate" name="dailyRate" step="0.5" min="0.5" required placeholder="1">
+        </div>
+        <div class="field">
+          <label for="currentStock">מלאי נוכחי (כדורים)</label>
+          <input type="number" id="currentStock" name="currentStock" step="1" min="0" required placeholder="30">
+        </div>
+      </div>
+      <div class="field">
+        <label for="alertDays">להתריע כמה ימים לפני שהמלאי נגמר</label>
+        <select id="alertDays" name="alertDays">
+          <option value="3">3 ימים</option>
+          <option value="5">5 ימים</option>
+          <option value="7" selected>שבוע</option>
+          <option value="14">שבועיים</option>
+          <option value="30">חודש</option>
+        </select>
+        <p class="field-hint">בהתאם לזה נקבע מתי הכרטיס יעבור לצהוב</p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="cancelBtn" class="btn-secondary">ביטול</button>
+        <button type="submit" class="btn-primary">שמירה</button>
+      </div>
+      <button type="button" id="deleteBtn" class="btn-danger-text">מחיקת תרופה</button>
+    </form>
+  </div>
+</div>
+
+<div id="receiveModalOverlay" class="modal-overlay">
+  <div class="modal">
+    <h2>עדכון מלאי</h2>
+    <form id="receiveForm">
+      <p class="field-hint" id="receiveMedName" style="margin-bottom:14px;"></p>
+      <div class="field">
+        <label for="receiveAmount">כמה כדורים התווספו למלאי?</label>
+        <input type="number" id="receiveAmount" name="receiveAmount" step="1" min="1" required placeholder="לדוגמה: 30" autocomplete="off">
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="receiveCancelBtn" class="btn-secondary">ביטול</button>
+        <button type="submit" class="btn-primary">עדכון מלאי</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

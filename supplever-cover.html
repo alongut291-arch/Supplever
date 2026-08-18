@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supplever — ניהול מלאי תרופות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-canvas:#EAEFE7;
+    --bg-canvas-deep:#DEE6DA;
+    --ink:#182720;
+    --ink-soft:#51625A;
+    --teal-deep:#1F4A43;
+    --teal-deep-light:#2E6259;
+    --clay:#D98F4E;
+    --clay-dark:#B96F31;
+    --status-good:#4C7A5E;
+    --status-warn:#D9A441;
+    --status-danger:#C1503A;
+    --capsule-cap:#D98F4E;
+    --capsule-body:#F1E4C7;
+    --card-bg:#FFFFFF;
+    --border-soft: rgba(24,39,32,0.12);
+    --shadow-soft: 0 24px 48px -24px rgba(24,39,32,0.30);
+    --font-display: 'Frank Ruhl Libre', serif;
+    --font-body: 'Heebo', sans-serif;
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  html{ scroll-behavior:smooth; }
+
+  body{
+    background:var(--bg-canvas);
+    color:var(--ink);
+    font-family:var(--font-body);
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  h1,h2,h3{ font-family:var(--font-display); font-weight:700; color:var(--ink); }
+
+  a{ color:inherit; }
+
+  button{ font-family:var(--font-body); cursor:pointer; border:none; }
+
+  .wrap{ max-width:1180px; margin:0 auto; padding:0 32px; }
+
+  /* ---------- header ---------- */
+  .site-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:28px 32px; max-width:1180px; margin:0 auto;
+  }
+  .logo{ display:flex; align-items:center; gap:10px; }
+  .logo-icon{ width:58px; height:39px; display:block; flex-shrink:0; }
+  .logo-text{ font-family:var(--font-display); font-size:20px; font-weight:700; }
+  .badge{
+    font-size:12px; font-weight:600; color:var(--teal-deep); background:rgba(31,74,67,0.09);
+    border:1px solid rgba(31,74,67,0.2); border-radius:999px; padding:5px 14px;
+    letter-spacing:.02em;
+  }
+
+  /* ---------- hero ---------- */
+  .hero{
+    max-width:1180px; margin:0 auto; padding:40px 32px 100px;
+    display:grid; grid-template-columns:1.05fr 0.95fr; gap:56px; align-items:center;
+  }
+  .eyebrow{
+    font-size:14px; font-weight:600; color:var(--teal-deep);
+    letter-spacing:.03em; margin-bottom:18px;
+  }
+  .hero h1{
+    font-size:clamp(38px,5vw,58px); line-height:1.12; letter-spacing:-0.01em;
+  }
+  .hero h1 .accent{ color:var(--clay-dark); }
+  .lede{
+    margin-top:22px; font-size:18px; color:var(--ink-soft); max-width:46ch;
+  }
+  .hero-cta{ margin-top:34px; display:flex; flex-direction:column; gap:12px; align-items:flex-start; }
+  .btn-primary{
+    background:var(--teal-deep); color:#fff; font-size:16px; font-weight:600;
+    padding:15px 28px; border-radius:12px; box-shadow:var(--shadow-soft);
+    transition:transform .18s ease, background .18s ease;
+  }
+  .btn-primary:hover{ background:var(--teal-deep-light); transform:translateY(-2px); }
+  .btn-primary:focus-visible{ outline:3px solid var(--clay); outline-offset:3px; }
+  .hero-note{ font-size:13px; color:var(--ink-soft); }
+
+  /* ---------- hero visual: medication card mockup ---------- */
+  .hero-visual{ position:relative; display:flex; justify-content:center; }
+  .med-card{
+    background:var(--card-bg); border-radius:22px; padding:26px 26px 22px;
+    width:100%; max-width:340px; box-shadow:var(--shadow-soft);
+    border:1px solid var(--border-soft);
+  }
+  .med-card-top{ display:flex; align-items:center; gap:12px; }
+  .status-dot{ width:12px; height:12px; border-radius:50%; flex-shrink:0; margin-top:4px; }
+  .status-good{ background:var(--status-good); }
+  .status-warn{ background:var(--status-warn); }
+  .status-danger{ background:var(--status-danger); }
+  .med-name{ font-family:var(--font-display); font-size:20px; font-weight:700; }
+  .med-dose{ font-size:13px; color:var(--ink-soft); margin-top:2px; }
+
+  .stock-bar-wrap{ margin-top:22px; }
+  .stock-bar{
+    position:relative; height:14px; border-radius:999px; background:var(--bg-canvas-deep);
+    overflow:visible;
+  }
+  .stock-bar-fill{
+    position:absolute; inset:0; right:0; width:0%; border-radius:999px;
+    background:linear-gradient(90deg,var(--status-danger),var(--status-warn));
+    transition:width 1.4s cubic-bezier(.2,.8,.2,1);
+  }
+  .stock-marker{
+    position:absolute; top:-30px; transform:translateX(50%);
+    background:var(--ink); color:#fff; font-size:11px; font-weight:600;
+    padding:3px 9px; border-radius:8px; white-space:nowrap;
+  }
+  .stock-marker::after{
+    content:""; position:absolute; bottom:-4px; right:50%; transform:translateX(50%);
+    border:4px solid transparent; border-top-color:var(--ink);
+  }
+  .stock-bar-labels{
+    display:flex; justify-content:space-between; font-size:11px; color:var(--ink-soft);
+    margin-top:10px;
+  }
+  .med-hint{
+    margin-top:16px; font-size:12.5px; color:var(--ink-soft);
+    background:var(--bg-canvas); border-radius:10px; padding:10px 12px;
+  }
+
+  .mini-stat-chip{
+    position:absolute; background:var(--card-bg); border-radius:14px;
+    padding:12px 16px; box-shadow:var(--shadow-soft); border:1px solid var(--border-soft);
+    text-align:center;
+  }
+  .chip-1{ top:-6%; right:-8%; }
+  .chip-2{ bottom:2%; left:-10%; }
+  .chip-num{ font-family:var(--font-display); font-size:24px; font-weight:700; color:var(--teal-deep); }
+  .chip-label{ font-size:11px; color:var(--ink-soft); margin-top:2px; }
+
+  /* ---------- problem band ---------- */
+  .problem-band{
+    background:var(--teal-deep); color:#fff; text-align:center;
+    padding:56px 32px;
+  }
+  .problem-band p{ font-family:var(--font-display); font-size:clamp(20px,3vw,28px); max-width:720px; margin:0 auto; }
+  .problem-band .problem-sub{
+    font-family:var(--font-body); font-size:15px; opacity:.75; margin-top:12px;
+  }
+
+  /* ---------- sections generic ---------- */
+  section.content{ max-width:1180px; margin:0 auto; padding:96px 32px; }
+  .section-head{ text-align:center; max-width:560px; margin:0 auto 56px; }
+  .section-head h2{ font-size:clamp(26px,3vw,34px); }
+  .section-sub{ color:var(--ink-soft); margin-top:12px; font-size:16px; }
+
+  /* ---------- cycle diagram ---------- */
+  .cycle-diagram{
+    position:relative; width:100%; max-width:520px; aspect-ratio:1/1; margin:0 auto;
+  }
+  .cycle-diagram svg{ position:absolute; inset:0; width:100%; height:100%; }
+  .cycle-node{
+    position:absolute; transform:translate(-50%,-50%); width:150px; text-align:center;
+  }
+  .cycle-node .num{
+    width:34px; height:34px; border-radius:50%; background:var(--card-bg);
+    border:2px solid var(--teal-deep); color:var(--teal-deep); font-weight:700;
+    display:flex; align-items:center; justify-content:center; margin:0 auto 10px;
+    font-family:var(--font-display); box-shadow:var(--shadow-soft);
+  }
+  .cycle-node p{ font-size:13px; color:var(--ink-soft); line-height:1.4; }
+  .cycle-arrow{
+    position:absolute; font-size:18px; line-height:1; color:var(--clay-dark);
+    transform-origin:center;
+  }
+  .cycle-center{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    text-align:center; font-size:12px; color:var(--ink-soft); max-width:120px;
+  }
+
+  /* ---------- features ---------- */
+  .features-grid{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:24px;
+  }
+  .feature-card{
+    background:var(--card-bg); border:1px solid var(--border-soft); border-radius:18px;
+    padding:28px 24px; transition:transform .18s ease, box-shadow .18s ease;
+  }
+  .feature-card:hover{ transform:translateY(-4px); box-shadow:var(--shadow-soft); }
+  .feature-icon{
+    width:40px; height:40px; border-radius:11px; background:rgba(31,74,67,0.09);
+    display:flex; align-items:center; justify-content:center; margin-bottom:16px;
+    color:var(--teal-deep);
+  }
+  .feature-card h3{ font-size:17px; font-weight:700; }
+  .feature-card p{ font-size:14px; color:var(--ink-soft); margin-top:8px; }
+
+  /* ---------- audience ---------- */
+  .audience{ background:var(--bg-canvas-deep); }
+  .audience-list{
+    display:flex; flex-wrap:wrap; gap:14px; justify-content:center;
+  }
+  .audience-chip{
+    background:var(--card-bg); border:1px solid var(--border-soft); border-radius:999px;
+    padding:12px 22px; font-size:15px; font-weight:500;
+  }
+
+  /* ---------- final CTA ---------- */
+  .final-cta{ text-align:center; }
+  .final-cta h2{ font-size:clamp(28px,4vw,40px); }
+  .final-cta p{ color:var(--ink-soft); margin-top:14px; font-size:16px; }
+  .final-cta .btn-primary{ margin-top:28px; }
+  .dev-note{ margin-top:18px; font-size:13px; color:var(--ink-soft); }
+  .click-counter{ margin-top:14px; font-size:13px; color:var(--teal-deep); font-weight:600; min-height:18px; }
+
+  footer{
+    text-align:center; padding:32px; font-size:13px; color:var(--ink-soft);
+    border-top:1px solid var(--border-soft);
+  }
+
+  /* ---------- reveal ---------- */
+  .reveal{ opacity:0; transform:translateY(18px); transition:opacity .7s ease, transform .7s ease; }
+  .reveal.in{ opacity:1; transform:translateY(0); }
+
+  .toast{
+    position:fixed; bottom:28px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff; padding:13px 22px; border-radius:12px;
+    font-size:14px; opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s ease;
+    z-index:50;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @media (max-width:900px){
+    .hero{ grid-template-columns:1fr; padding-top:20px; }
+    .hero-visual{ margin-top:20px; }
+    .chip-1,.chip-2{ display:none; }
+    .features-grid{ grid-template-columns:1fr 1fr; }
+    .cycle-node{ width:110px; }
+  }
+  @media (max-width:560px){
+    .site-header{ padding:22px 20px; }
+    .hero{ padding:10px 20px 70px; }
+    section.content{ padding:64px 20px; }
+    .features-grid{ grid-template-columns:1fr; }
+    .cycle-diagram{ max-width:340px; }
+    .cycle-node{ width:90px; }
+    .cycle-node p{ font-size:11px; }
+    .cycle-node .num{ width:28px; height:28px; font-size:13px; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; animation:none !important; scroll-behavior:auto !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo">
+    <svg class="logo-icon" viewBox="0 0 84 56" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <rect id="capsuleShape" x="-7" y="-3.5" width="14" height="7" rx="3.5" ry="3.5"/>
+        <clipPath id="capsuleLeftHalf"><rect x="-7.5" y="-4" width="7.5" height="8"/></clipPath>
+      </defs>
+      <g transform="translate(76,28) rotate(90)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(72.63,43.64) rotate(120.6)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(63.2,47.5) rotate(-161.49)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(49.57,36.68) rotate(-132.61)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(34.43,19.32) rotate(-132.61)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(20.8,8.5) rotate(-161.49)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(11.37,12.36) rotate(120.6)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(8,28) rotate(90)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(11.37,43.64) rotate(59.4)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(20.8,47.5) rotate(-18.51)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(34.43,36.68) rotate(-47.39)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(49.57,19.32) rotate(-47.39)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(63.2,8.5) rotate(-18.51)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(72.63,12.36) rotate(59.4)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+    </svg>
+    <span class="logo-text">Supplever</span>
+  </div>
+  <span class="badge">קונספט מוצר</span>
+</header>
+
+<main>
+
+  <section class="hero">
+    <div class="hero-text">
+      <p class="eyebrow">אפליקציית ניהול מלאי תרופות לחולים כרוניים</p>
+      <h1>Supplever<br><span class="accent">תמיד צעד אחד לפני גמר המלאי</span></h1>
+      <p class="lede">Supplever עוקבת ברקע אחרי מלאי התרופות שלכם, מחשבת כמה ימים נשארו, ומתריעה מספיק זמן מראש כדי שתזמינו בלי לחץ ובלי הפתעות.</p>
+      <div class="hero-cta">
+        <button class="btn-primary" id="ctaBtn">התחילו לעקוב אחרי המלאי</button>
+        <p class="hero-note">עובדת גם בלי אינטרנט · הנתונים נשמרים על המכשיר שלכם</p>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="med-card">
+        <div class="med-card-top">
+          <span class="status-dot status-warn"></span>
+          <div>
+            <p class="med-name">Omeprazole</p>
+            <p class="med-dose">20 מ״ג · כדור אחד בבוקר</p>
+          </div>
+        </div>
+        <div class="stock-bar-wrap">
+          <div class="stock-bar">
+            <div class="stock-bar-fill" id="stockFill"></div>
+            <div class="stock-marker" id="stockMarker" style="right:0%"><span>6 ימים</span></div>
+          </div>
+          <div class="stock-bar-labels">
+            <span>0</span><span>מלאי נוכחי</span><span>30 ימים</span>
+          </div>
+        </div>
+        <p class="med-hint">מומלץ להזמין החל מ־7 ימים לפני שהמלאי נגמר</p>
+      </div>
+      <div class="mini-stat-chip chip-1">
+        <p class="chip-num">12</p><p class="chip-label">תרופות פעילות</p>
+      </div>
+      <div class="mini-stat-chip chip-2">
+        <p class="chip-num">2</p><p class="chip-label">דורשות הזמנה</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="problem-band">
+    <p>הרגע שכל מטופל כרוני מכיר: היד נשלחת לקופסה — והיא ריקה.</p>
+    <p class="problem-sub">Supplever קיימת כדי למנוע בדיוק את הרגע הזה.</p>
+  </section>
+
+  <section class="content how-it-works reveal">
+    <div class="section-head">
+      <h2>איך זה עובד?</h2>
+      <p class="section-sub">מעגל פשוט שרץ ברקע, בלי שתצטרכו לחשוב על זה בכלל</p>
+    </div>
+
+    <div class="cycle-diagram">
+      <svg viewBox="0 0 400 400" fill="none" aria-hidden="true">
+        <circle cx="200" cy="200" r="150" stroke="var(--border-soft)" stroke-width="2" stroke-dasharray="3 9" />
+      </svg>
+
+      <div class="cycle-node" style="left:50%; top:12.5%;">
+        <div class="num">1</div>
+        <p>מוסיפים תרופה למערכת</p>
+      </div>
+      <div class="cycle-node" style="left:85.7%; top:38.4%;">
+        <div class="num">2</div>
+        <p>המערכת עוקבת אחרי הצריכה היומית</p>
+      </div>
+      <div class="cycle-node" style="left:72%; top:80.3%;">
+        <div class="num">3</div>
+        <p>מתקבלת התראה בזמן</p>
+      </div>
+      <div class="cycle-node" style="left:28%; top:80.3%;">
+        <div class="num">4</div>
+        <p>התרופה עוברת לרשימת ההזמנות</p>
+      </div>
+      <div class="cycle-node" style="left:14.3%; top:38.4%;">
+        <div class="num">5</div>
+        <p>מעדכנים מלאי אחרי קבלה</p>
+      </div>
+
+      <span class="cycle-arrow" style="left:72%; top:19.7%; transform:translate(-50%,-50%) rotate(36deg);">➤</span>
+      <span class="cycle-arrow" style="left:85.7%; top:61.6%; transform:translate(-50%,-50%) rotate(108deg);">➤</span>
+      <span class="cycle-arrow" style="left:50%; top:87.5%; transform:translate(-50%,-50%) rotate(180deg);">➤</span>
+      <span class="cycle-arrow" style="left:14.3%; top:61.6%; transform:translate(-50%,-50%) rotate(252deg);">➤</span>
+      <span class="cycle-arrow" style="left:28%; top:19.7%; transform:translate(-50%,-50%) rotate(324deg);">➤</span>
+
+      <div class="cycle-center">והמעגל מתחיל שוב</div>
+    </div>
+  </section>
+
+  <section class="content features reveal">
+    <div class="section-head">
+      <h2>מה תמצאו באפליקציה?</h2>
+      <p class="section-sub">הכול נבנה סביב שאלה אחת: כמה זמן נשאר לי עד שהמלאי ייגמר?</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">↻</div>
+        <h3>מעקב מלאי אוטומטי</h3>
+        <p>מזינים כמות כדורים וקצב נטילה יומי, והמערכת מחשבת בעצמה כמה ימים נשארו.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⏰</div>
+        <h3>התראות בזמן שלכם</h3>
+        <p>בוחרים מראש כמה ימים לפני הסוף לקבל התראה — מ־3 ימים ועד חודש שלם.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🗂</div>
+        <h3>רשימת הזמנות מרוכזת</h3>
+        <p>כל התרופות שהגיע זמנן מתרכזות במקום אחד, מוכנות להזמנה מול בית המרקחת.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">✓</div>
+        <h3>עדכון מהיר אחרי קבלה</h3>
+        <p>מסמנים כמה קופסאות התקבלו, והמלאי מתעדכן לבד — בלי חישובים ידניים.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>עובדת גם בלי אינטרנט</h3>
+        <p>כל המידע נשמר על המכשיר ומסתנכרן אוטומטית ברגע שיש חיבור.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">●</div>
+        <h3>תצוגה צבעונית וברורה</h3>
+        <p>ירוק, צהוב, אדום — מבט אחד בדשבורד מספיק כדי לדעת מה דחוף ומה לא.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="content audience reveal">
+    <div class="section-head">
+      <h2>למי זה מיועד?</h2>
+      <p class="section-sub">כל מי שלא רוצה להסתמך על הזיכרון כשמדובר בתרופות</p>
+    </div>
+    <div class="audience-list">
+      <span class="audience-chip">חולים כרוניים</span>
+      <span class="audience-chip">מבוגרים</span>
+      <span class="audience-chip">בני משפחה מטפלים</span>
+      <span class="audience-chip">כל מי שרוצה שקט נפשי לגבי מלאי התרופות בבית</span>
+    </div>
+  </section>
+
+  <section class="content final-cta reveal">
+    <h2>אל תחכו למחסור הבא</h2>
+    <p>הצטרפו לרשימת ההמתנה ותהיו הראשונים לדעת כשהאפליקציה יוצאת לאוויר</p>
+    <button class="btn-primary" id="ctaBtn2">אני רוצה להצטרף</button>
+    <p class="click-counter" id="clickCounter" aria-live="polite"></p>
+    <p class="dev-note">בפיתוח פעיל · MVP צפוי בקרוב</p>
+  </section>
+
+</main>
+
+<footer>
+  <p>Supplever — עמוד קונספט, מבוסס על מסמך האפיון הראשוני</p>
+</footer>
+
+<div class="toast" id="toast">תודה! נעדכן אתכם כשהאפליקציה תהיה מוכנה 🌿</div>
+
+<script>
+  // animate stock bar fill on load
+  window.addEventListener('load', () => {
+    requestAnimationFrame(() => {
+      const fill = document.getElementById('stockFill');
+      const marker = document.getElementById('stockMarker');
+      fill.style.width = '80%';
+      marker.style.right = '80%';
+    });
+  });
+
+  // scroll reveal
+  const revealEls = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('in'); });
+  }, { threshold: 0.15 });
+  revealEls.forEach(el => io.observe(el));
+
+  // CTA toast
+  function showToast(){
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2800);
+  }
+
+  // click tracking: counts unique clickers (across both CTA buttons) and
+  // per-button totals, using the artifact's persistent storage.
+  // NOTE: this is scoped to this artifact only — it does not track real
+  // website visitors and is not a substitute for real analytics.
+  const counterEl = document.getElementById('clickCounter');
+
+  function renderCounter(uniqueCount){
+    if (uniqueCount > 0){
+      counterEl.textContent = `כבר ${uniqueCount} אנשים לחצו על אחד מכפתורי ההצטרפות`;
+    }
+  }
+
+  async function loadInitialCount(){
+    try{
+      const res = await window.storage.get('stats:unique-total', true);
+      if (res) renderCounter(parseInt(res.value, 10));
+    } catch(err){
+      // key doesn't exist yet — no clicks recorded so far, nothing to show
+    }
+  }
+
+  async function recordClick(source){
+    try{
+      // per-button total (shared — visible to everyone using this artifact)
+      const totalKey = `stats:total:${source}`;
+      let currentTotal = 0;
+      try{
+        const totalRes = await window.storage.get(totalKey, true);
+        if (totalRes) currentTotal = parseInt(totalRes.value, 10);
+      } catch(err){ /* first click for this button */ }
+      await window.storage.set(totalKey, String(currentTotal + 1), true);
+
+      // unique-clicker dedup (personal — scoped to this user only)
+      let alreadyClicked = false;
+      try{
+        const personalRes = await window.storage.get('stats:has-clicked', false);
+        alreadyClicked = !!personalRes;
+      } catch(err){ /* this user hasn't clicked before */ }
+
+      if (!alreadyClicked){
+        await window.storage.set('stats:has-clicked', 'true', false);
+        let currentUnique = 0;
+        try{
+          const uniqueRes = await window.storage.get('stats:unique-total', true);
+          if (uniqueRes) currentUnique = parseInt(uniqueRes.value, 10);
+        } catch(err){ /* first unique clicker */ }
+        await window.storage.set('stats:unique-total', String(currentUnique + 1), true);
+        renderCounter(currentUnique + 1);
+      } else {
+        const uniqueRes = await window.storage.get('stats:unique-total', true);
+        if (uniqueRes) renderCounter(parseInt(uniqueRes.value, 10));
+      }
+    } catch(err){
+      console.error('click tracking failed:', err);
+    }
+  }
+
+  document.getElementById('ctaBtn').addEventListener('click', () => {
+    showToast();
+    recordClick('hero-cta');
+  });
+  document.getElementById('ctaBtn2').addEventListener('click', () => {
+    showToast();
+    recordClick('final-cta');
+  });
+
+  loadInitialCount();
+</script>
+
+</body>
+</html>
