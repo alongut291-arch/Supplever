@@ -10,6 +10,8 @@
   --status-good:#4C7A5E;
   --status-warn:#D9A441;
   --status-danger:#C1503A;
+  --capsule-cap:#D98F4E;
+  --capsule-body:#F1E4C7;
   --card-bg:#FFFFFF;
   --border-soft: rgba(24,39,32,0.12);
   --shadow-soft: 0 24px 48px -24px rgba(24,39,32,0.30);
@@ -40,6 +42,8 @@ button{ font-family:var(--font-body); cursor:pointer; border:none; }
   display:flex; align-items:center; justify-content:space-between;
   padding:24px 20px; max-width:640px; margin:0 auto;
 }
+.logo{ display:flex; align-items:center; gap:10px; }
+.logo-icon{ width:48px; height:32px; display:block; flex-shrink:0; }
 .app-title{ font-family:var(--font-display); font-size:22px; font-weight:700; }
 .app-sub{ font-size:13px; color:var(--ink-soft); margin-top:2px; }
 

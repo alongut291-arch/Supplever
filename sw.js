@@ -1,7 +1,7 @@
 // Service worker for Supplever.
 // Handles: offline app-shell caching, and showing system notifications.
 // Bump CACHE_NAME whenever app files change, so users get the fresh version.
-const CACHE_NAME = 'supplever-v1';
+const CACHE_NAME = 'supplever-v4';
 
 const APP_SHELL = [
   './',

@@ -66,6 +66,12 @@ function formatDays(days) {
   return `${rounded} ימים נותרו`;
 }
 
+const ALERT_DAYS_LABELS = { 7: 'שבוע', 14: 'שבועיים', 21: 'שלושה שבועות', 30: 'חודש' };
+
+function formatAlertDays(alertDays) {
+  return ALERT_DAYS_LABELS[alertDays] || `${alertDays} ימים`;
+}
+
 /* ---------- rendering ---------- */
 
 const listEl = document.getElementById('medList');
@@ -94,7 +100,7 @@ function medCardHTML(med) {
       <div class="stock-bar">
         <div class="stock-bar-fill ${status}" style="width:${fill}%"></div>
       </div>
-      <p class="med-hint">מלאי נוכחי: ${med.currentStock} כדורים · התראה מ-${med.alertDays} ימים לפני הסוף</p>
+      <p class="med-hint">מלאי נוכחי: ${med.currentStock} כדורים${med.pillsPerBox ? ` (כ-${Math.round((med.currentStock / med.pillsPerBox) * 10) / 10} קופסאות)` : ''} · התראה מ-${formatAlertDays(med.alertDays)} לפני הסוף</p>
       <button class="received-btn" data-action="receive" data-id="${med.id}">קיבלתי הזמנה — עדכן מלאי</button>
     </div>
   `;
@@ -148,15 +154,34 @@ const modalTitle = document.getElementById('modalTitle');
 const deleteBtn = document.getElementById('deleteBtn');
 let editingId = null;
 
+const DEFAULT_ALERT_DAYS_KEY = 'supplever_default_alert_days';
+
+function getDefaultAlertDays() {
+  return localStorage.getItem(DEFAULT_ALERT_DAYS_KEY) || '7';
+}
+
+function recalcStockFromBoxes() {
+  const pillsPerBox = parseFloat(form.pillsPerBox.value);
+  const boxes = parseFloat(form.currentBoxes.value);
+  if (!isNaN(pillsPerBox) && pillsPerBox > 0 && !isNaN(boxes) && boxes >= 0) {
+    form.currentStock.value = pillsPerBox * boxes;
+  }
+}
+
+form.pillsPerBox.addEventListener('input', recalcStockFromBoxes);
+form.currentBoxes.addEventListener('input', recalcStockFromBoxes);
+
 function openModal(med = null) {
   editingId = med ? med.id : null;
   modalTitle.textContent = med ? 'עריכת תרופה' : 'הוספת תרופה';
   deleteBtn.style.display = med ? 'block' : 'none';
   form.name.value = med ? med.name : '';
   form.dose.value = med ? med.dose : '';
+  form.pillsPerBox.value = med ? (med.pillsPerBox ?? '') : '';
   form.dailyRate.value = med ? med.dailyRate : '';
+  form.currentBoxes.value = med ? (med.currentBoxes ?? '') : '';
   form.currentStock.value = med ? med.currentStock : '';
-  form.alertDays.value = med ? med.alertDays : 7;
+  form.alertDays.value = med ? med.alertDays : getDefaultAlertDays();
   overlay.classList.add('open');
   form.name.focus();
 }
@@ -178,13 +203,17 @@ form.addEventListener('submit', (e) => {
   const med = {
     name: form.name.value.trim(),
     dose: form.dose.value.trim(),
+    pillsPerBox: parseFloat(form.pillsPerBox.value),
     dailyRate: parseFloat(form.dailyRate.value),
+    currentBoxes: parseFloat(form.currentBoxes.value),
     currentStock: parseFloat(form.currentStock.value),
     alertDays: parseInt(form.alertDays.value, 10),
   };
-  if (!med.name || !med.dailyRate || med.dailyRate <= 0 || isNaN(med.currentStock) || med.currentStock < 0) {
+  if (!med.name || !med.pillsPerBox || med.pillsPerBox <= 0 || !med.dailyRate || med.dailyRate <= 0
+    || isNaN(med.currentBoxes) || med.currentBoxes < 0 || isNaN(med.currentStock) || med.currentStock < 0) {
     return;
   }
+  localStorage.setItem(DEFAULT_ALERT_DAYS_KEY, String(med.alertDays));
   if (editingId) {
     updateMed(editingId, med);
     showToast('התרופה עודכנה');
@@ -254,10 +283,11 @@ function openReceiveModal(id) {
   const med = loadMeds().find(m => m.id === id);
   if (!med) return;
   receivingId = id;
-  receiveMedNameEl.textContent = `${med.name} · מלאי נוכחי: ${med.currentStock} כדורים`;
+  const perBoxHint = med.pillsPerBox ? ` · כל קופסה = ${med.pillsPerBox} כדורים` : '';
+  receiveMedNameEl.textContent = `${med.name} · מלאי נוכחי: ${med.currentStock} כדורים${perBoxHint}`;
   receiveForm.reset();
   receiveOverlay.classList.add('open');
-  receiveForm.receiveAmount.focus();
+  receiveForm.receiveBoxes.focus();
 }
 
 function closeReceiveModal() {
@@ -272,11 +302,15 @@ receiveOverlay.addEventListener('click', (e) => {
 
 receiveForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  const addedNum = parseFloat(receiveForm.receiveAmount.value);
-  if (!receivingId || isNaN(addedNum) || addedNum <= 0) return;
+  const boxesReceived = parseFloat(receiveForm.receiveBoxes.value);
+  if (!receivingId || isNaN(boxesReceived) || boxesReceived <= 0) return;
   const med = loadMeds().find(m => m.id === receivingId);
   if (!med) return;
-  updateMed(receivingId, { currentStock: med.currentStock + addedNum });
+  const pillsPerBox = med.pillsPerBox || 1;
+  updateMed(receivingId, {
+    currentStock: med.currentStock + boxesReceived * pillsPerBox,
+    currentBoxes: (med.currentBoxes || 0) + boxesReceived,
+  });
   closeReceiveModal();
   render();
   showToast('המלאי עודכן');
