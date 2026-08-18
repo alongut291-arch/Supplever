@@ -42,7 +42,7 @@
     </svg>
     <div>
       <p class="app-title">Supplever</p>
-      <p class="app-sub">המלאי שלי</p>
+      <p class="app-sub">תמיד צעד אחד לפני גמר המלאי</p>
     </div>
   </div>
 </header>
@@ -66,7 +66,29 @@
 
   <section id="dashboardView" class="view">
     <div id="emptyState" class="empty-state">
-      <p class="big">💊</p>
+      <svg class="empty-capsule" viewBox="0 0 140 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="emptyCapsuleBody" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#FBF4E3"/>
+            <stop offset="100%" stop-color="#E4D2A8"/>
+          </linearGradient>
+          <linearGradient id="emptyCapsuleCap" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#EAAE71"/>
+            <stop offset="100%" stop-color="#B96F31"/>
+          </linearGradient>
+          <clipPath id="emptyCapsuleLeftHalf">
+            <rect x="-48" y="-26" width="48" height="52"/>
+          </clipPath>
+        </defs>
+        <ellipse cx="70" cy="112" rx="34" ry="7" fill="#182720" opacity="0.12"/>
+        <g transform="translate(70,64) rotate(45)">
+          <rect x="-48" y="-24" width="96" height="48" rx="24" fill="url(#emptyCapsuleBody)" stroke="rgba(24,39,32,0.15)" stroke-width="1"/>
+          <g clip-path="url(#emptyCapsuleLeftHalf)">
+            <rect x="-48" y="-24" width="96" height="48" rx="24" fill="url(#emptyCapsuleCap)"/>
+          </g>
+          <ellipse cx="-14" cy="-11" rx="22" ry="6" fill="#ffffff" opacity="0.35"/>
+        </g>
+      </svg>
       <p><strong>עדיין לא הוספתם תרופות</strong></p>
       <p>לחצו על "הוספת תרופה" כדי להתחיל לעקוב אחרי המלאי</p>
     </div>
