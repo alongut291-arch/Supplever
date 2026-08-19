@@ -4,27 +4,31 @@ $root = Split-Path -Parent $PSScriptRoot
 $iconsDir = Join-Path $root "icons"
 if (-not (Test-Path $iconsDir)) { New-Item -ItemType Directory -Path $iconsDir | Out-Null }
 
-# Exact transforms copied from the ring-of-capsules logo in supplever-cover.html / index.html.
-# Each entry: translateX, translateY, rotateDegrees (viewBox is 0 0 84 56).
+# Ring-of-capsules logo, final shape (Aug 2026 revision): the 4 central "crossing" capsules are
+# untouched from the original cover-page logo; the two side loops were rebuilt as true circles
+# (radius ~17.5-20.5) offset further from center for an infinity-symbol look, with the two
+# capsules nearest the crossing tilted slightly to face their own loop's center, and the two
+# bottom-most capsules (one per loop) additionally rotated for visual balance. This exact list
+# is also embedded as inline SVG in index.html and supplever-cover.html -- keep all three in sync.
+# Each entry: translateX, translateY, rotateDegrees.
 $capsules = @(
-  @(76,   28,    90),
-  @(72.63,43.64, 120.6),
-  @(63.2, 47.5, -161.49),
-  @(49.57,36.68,-132.61),
-  @(34.43,19.32,-132.61),
-  @(20.8, 8.5,  -161.49),
-  @(11.37,12.36, 120.6),
-  @(8,    28,    90),
-  @(11.37,43.64, 59.4),
-  @(20.8, 47.5, -18.51),
-  @(34.43,36.68,-47.39),
-  @(49.57,19.32,-47.39),
-  @(63.2, 8.5,  -18.51),
-  @(72.63,12.36, 59.4)
-)
+  @(49.57, 36.68, -132.61),
+  @(34.43, 19.32, -132.61),
+  @(34.43, 36.68, -47.39),
+  @(49.57, 19.32, -47.39),
 
-$viewCenterX = 42
-$viewCenterY = 28
+  @(88.5,  28.0,   90),
+  @(81.04, 42.34,  145),
+  @(63.84, 45.08,  197),
+  @(81.04, 13.66,  35),
+  @(63.84, 10.92,  -6),
+
+  @(-4.5,  28.0,   90),
+  @(2.96,  42.34,  35),
+  @(20.16, 45.08,  -17),
+  @(2.96,  13.66,  145),
+  @(20.16, 10.92,  186)
+)
 
 # NOTE: parameters MUST be explicitly typed [double]. Without it, PowerShell's
 # command-mode argument parser binds a literal like -7 as the STRING "-7"
@@ -41,17 +45,24 @@ function Get-RoundedPillPath([double]$x, [double]$y, [double]$width, [double]$he
   return $path
 }
 
-function New-SupplerverRingIcon([double]$size, [string]$outPath) {
+function New-SupplerverRingIcon([double]$size, [string]$bgHex, [string]$outPath) {
   $bmp = New-Object System.Drawing.Bitmap ([int]$size), ([int]$size)
   $g = [System.Drawing.Graphics]::FromImage($bmp)
   $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+  $g.Clear([System.Drawing.ColorTranslator]::FromHtml($bgHex))
 
-  $bg = [System.Drawing.ColorTranslator]::FromHtml('#1F4A43')
-  $g.Clear($bg)
+  $minX = ($capsules | ForEach-Object { $_[0] } | Measure-Object -Minimum).Minimum
+  $maxX = ($capsules | ForEach-Object { $_[0] } | Measure-Object -Maximum).Maximum
+  $minY = ($capsules | ForEach-Object { $_[1] } | Measure-Object -Minimum).Minimum
+  $maxY = ($capsules | ForEach-Object { $_[1] } | Measure-Object -Maximum).Maximum
+  $spanX = $maxX - $minX + 16
+  $spanY = $maxY - $minY + 16
+  $boundsCenterX = ($maxX + $minX) / 2.0
+  $boundsCenterY = ($maxY + $minY) / 2.0
 
-  $margin = $size * 0.16
+  $margin = $size * 0.10
   $drawable = $size - 2 * $margin
-  $scale = $drawable / 84.0
+  $scale = [Math]::Min($drawable / $spanX, $drawable / $spanY)
   $canvasCenterX = $size / 2.0
   $canvasCenterY = $size / 2.0
 
@@ -62,8 +73,8 @@ function New-SupplerverRingIcon([double]$size, [string]$outPath) {
 
   foreach ($c in $capsules) {
     $tx = [double]$c[0]; $ty = [double]$c[1]; $angle = [double]$c[2]
-    $screenX = $canvasCenterX + ($tx - $viewCenterX) * $scale
-    $screenY = $canvasCenterY + ($ty - $viewCenterY) * $scale
+    $screenX = $canvasCenterX + ($tx - $boundsCenterX) * $scale
+    $screenY = $canvasCenterY + ($ty - $boundsCenterY) * $scale
 
     $state = $g.Save()
     $g.TranslateTransform([double]$screenX, [double]$screenY)
@@ -87,8 +98,9 @@ function New-SupplerverRingIcon([double]$size, [string]$outPath) {
   $bmp.Dispose()
 }
 
-New-SupplerverRingIcon 192.0 (Join-Path $iconsDir "icon-192.png")
-New-SupplerverRingIcon 512.0 (Join-Path $iconsDir "icon-512.png")
-New-SupplerverRingIcon 180.0 (Join-Path $iconsDir "apple-touch-icon.png")
+$bg = '#2E6259'
+New-SupplerverRingIcon 192.0 $bg (Join-Path $iconsDir "icon-192.png")
+New-SupplerverRingIcon 512.0 $bg (Join-Path $iconsDir "icon-512.png")
+New-SupplerverRingIcon 180.0 $bg (Join-Path $iconsDir "apple-touch-icon.png")
 
 Write-Host "Ring-logo icons generated in $iconsDir"
