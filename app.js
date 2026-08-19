@@ -560,6 +560,7 @@ emailForm.addEventListener('submit', (e) => {
 /* ---------- notifications ---------- */
 
 const NOTIFY_DISMISSED_KEY = 'supplever_notify_dismissed';
+const NOTIFY_REQUESTED_KEY = 'supplever_notify_requested';
 const notifyBanner = document.getElementById('notifyBanner');
 
 function todayStr() {
@@ -572,7 +573,8 @@ function updateNotifyBanner() {
     return;
   }
   const dismissed = localStorage.getItem(NOTIFY_DISMISSED_KEY) === 'true';
-  notifyBanner.hidden = Notification.permission !== 'default' || dismissed;
+  const alreadyRequested = localStorage.getItem(NOTIFY_REQUESTED_KEY) === 'true';
+  notifyBanner.hidden = Notification.permission !== 'default' || dismissed || alreadyRequested;
 }
 
 async function registerServiceWorker() {
@@ -624,6 +626,7 @@ async function checkAndNotify() {
 }
 
 document.getElementById('enableNotifyBtn').addEventListener('click', async () => {
+  localStorage.setItem(NOTIFY_REQUESTED_KEY, 'true');
   const permission = await Notification.requestPermission();
   updateNotifyBanner();
   if (permission === 'granted') {
