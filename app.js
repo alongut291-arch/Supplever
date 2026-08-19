@@ -80,6 +80,10 @@ const orderListEl = document.getElementById('orderList');
 const ordersEmptyStateEl = document.getElementById('ordersEmptyState');
 const ordersHintEl = document.getElementById('ordersHint');
 const orderBadgeEl = document.getElementById('orderBadge');
+const cartListEl = document.getElementById('cartList');
+const cartEmptyStateEl = document.getElementById('cartEmptyState');
+const cartHintEl = document.getElementById('cartHint');
+const cartBadgeEl = document.getElementById('cartBadge');
 
 function medCardHTML(med, extraHTML = '') {
   const status = medStatus(med);
@@ -119,6 +123,10 @@ function calcOrderSuggestion(med, months) {
   return { neededPills, neededBoxes };
 }
 
+function boxesLabel(neededBoxes) {
+  return neededBoxes === 1 ? 'קופסה אחת' : `${neededBoxes} קופסאות`;
+}
+
 function orderPlanningHTML(med) {
   const months = orderMonthsByMedId[med.id] || 1;
   const { neededPills, neededBoxes } = calcOrderSuggestion(med, months);
@@ -127,13 +135,12 @@ function orderPlanningHTML(med) {
     `<option value="${m}" ${m === months ? 'selected' : ''}>${ORDER_MONTHS_LABELS[m]}</option>`
   ).join('');
 
-  let resultText;
-  if (neededBoxes !== null) {
-    const boxesText = neededBoxes === 1 ? 'קופסה אחת' : `${neededBoxes} קופסאות`;
-    resultText = `כמות להזמנה: ${boxesText} (כ-${neededPills} כדורים)`;
-  } else {
-    resultText = `כמות להזמנה: כ-${neededPills} כדורים`;
-  }
+  const resultText = neededBoxes !== null
+    ? `כמות להזמנה: ${boxesLabel(neededBoxes)} (כ-${neededPills} כדורים)`
+    : `כמות להזמנה: כ-${neededPills} כדורים`;
+
+  const toggleLabel = med.inOrder ? '✓ ברשימת ההזמנה — הסר' : '+ הוסף להזמנה';
+  const toggleClass = med.inOrder ? 'toggle-order-btn in-order' : 'toggle-order-btn';
 
   return `
     <div class="order-planning">
@@ -143,6 +150,23 @@ function orderPlanningHTML(med) {
         קדימה
       </label>
       <p class="order-planning-result">${resultText}</p>
+      <button class="${toggleClass}" data-action="toggle-order" data-id="${med.id}">${toggleLabel}</button>
+    </div>
+  `;
+}
+
+function cartRowHTML(med) {
+  const qtyText = med.orderSnapshotBoxes
+    ? `${boxesLabel(med.orderSnapshotBoxes)} להזמנה (כ-${med.orderSnapshotPills} כדורים)`
+    : `כ-${med.orderSnapshotPills || 0} כדורים להזמנה`;
+
+  return `
+    <div class="cart-row" data-id="${med.id}">
+      <div class="cart-row-info">
+        <p class="cart-row-name">${escapeHtml(med.name)}${med.dose ? ` · ${escapeHtml(med.dose)}` : ''}</p>
+        <p class="cart-row-qty">${qtyText}</p>
+      </div>
+      <button class="cart-row-remove" data-action="toggle-order" data-id="${med.id}" aria-label="הסר מרשימת ההזמנה">✕</button>
     </div>
   `;
 }
@@ -162,10 +186,11 @@ function render() {
     emptyStateEl.style.display = 'block';
   } else {
     emptyStateEl.style.display = 'none';
-    listEl.innerHTML = sorted.map(medCardHTML).join('');
+    listEl.innerHTML = sorted.map(med => medCardHTML(med)).join('');
   }
 
   renderOrders(sorted);
+  renderCart(sorted);
 }
 
 function renderOrders(sortedMeds) {
@@ -185,6 +210,25 @@ function renderOrders(sortedMeds) {
   const countText = needsOrder.length === 1 ? 'תרופה אחת דורשת הזמנה' : `${needsOrder.length} תרופות דורשות הזמנה`;
   ordersHintEl.textContent = `${countText} — מוכן לקחת לבית המרקחת`;
   orderListEl.innerHTML = needsOrder.map(med => medCardHTML(med, orderPlanningHTML(med))).join('');
+}
+
+function renderCart(sortedMeds) {
+  const inCart = sortedMeds.filter(med => med.inOrder);
+
+  cartBadgeEl.textContent = inCart.length;
+  cartBadgeEl.hidden = inCart.length === 0;
+
+  if (inCart.length === 0) {
+    cartListEl.innerHTML = '';
+    cartEmptyStateEl.style.display = 'block';
+    cartHintEl.style.display = 'none';
+    return;
+  }
+  cartEmptyStateEl.style.display = 'none';
+  cartHintEl.style.display = 'block';
+  const countText = inCart.length === 1 ? 'תרופה אחת ברשימת ההזמנה' : `${inCart.length} תרופות ברשימת ההזמנה`;
+  cartHintEl.textContent = `${countText} — מוכן לקחת לבית המרקחת`;
+  cartListEl.innerHTML = inCart.map(cartRowHTML).join('');
 }
 
 /* ---------- modal ---------- */
@@ -284,6 +328,26 @@ function handleListClick(e) {
     return;
   }
 
+  const toggleBtn = e.target.closest('[data-action="toggle-order"]');
+  if (toggleBtn) {
+    e.stopPropagation();
+    const meds = loadMeds();
+    const med = meds.find(m => m.id === toggleBtn.dataset.id);
+    if (med) {
+      const newState = !med.inOrder;
+      if (newState) {
+        const months = orderMonthsByMedId[med.id] || 1;
+        const { neededPills, neededBoxes } = calcOrderSuggestion(med, months);
+        updateMed(med.id, { inOrder: true, orderSnapshotBoxes: neededBoxes, orderSnapshotPills: neededPills });
+      } else {
+        updateMed(med.id, { inOrder: false });
+      }
+      render();
+      showToast(newState ? 'נוספה לרשימת ההזמנה' : 'הוסרה מרשימת ההזמנה');
+    }
+    return;
+  }
+
   if (e.target.closest('.order-planning')) {
     e.stopPropagation();
     return;
@@ -299,31 +363,39 @@ function handleListClick(e) {
 
 listEl.addEventListener('click', handleListClick);
 orderListEl.addEventListener('click', handleListClick);
+cartListEl.addEventListener('click', handleListClick);
 
-orderListEl.addEventListener('change', (e) => {
+function handleMonthsChange(e) {
   const select = e.target.closest('.order-months-select');
   if (!select) return;
   orderMonthsByMedId[select.dataset.id] = parseInt(select.value, 10);
   render();
-});
+}
+
+orderListEl.addEventListener('change', handleMonthsChange);
+cartListEl.addEventListener('change', handleMonthsChange);
 
 /* ---------- tabs ---------- */
 
 const tabDashboard = document.getElementById('tabDashboard');
 const tabOrders = document.getElementById('tabOrders');
+const tabCart = document.getElementById('tabCart');
 const dashboardView = document.getElementById('dashboardView');
 const ordersView = document.getElementById('ordersView');
+const cartView = document.getElementById('cartView');
 
 function switchTab(view) {
-  const showOrders = view === 'orders';
-  dashboardView.hidden = showOrders;
-  ordersView.hidden = !showOrders;
-  tabDashboard.classList.toggle('active', !showOrders);
-  tabOrders.classList.toggle('active', showOrders);
+  dashboardView.hidden = view !== 'dashboard';
+  ordersView.hidden = view !== 'orders';
+  cartView.hidden = view !== 'cart';
+  tabDashboard.classList.toggle('active', view === 'dashboard');
+  tabOrders.classList.toggle('active', view === 'orders');
+  tabCart.classList.toggle('active', view === 'cart');
 }
 
 tabDashboard.addEventListener('click', () => switchTab('dashboard'));
 tabOrders.addEventListener('click', () => switchTab('orders'));
+tabCart.addEventListener('click', () => switchTab('cart'));
 
 /* ---------- receive-stock modal ---------- */
 
@@ -363,6 +435,7 @@ receiveForm.addEventListener('submit', (e) => {
   updateMed(receivingId, {
     currentStock: med.currentStock + boxesReceived * pillsPerBox,
     currentBoxes: (med.currentBoxes || 0) + boxesReceived,
+    inOrder: false,
   });
   closeReceiveModal();
   render();
