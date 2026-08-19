@@ -120,6 +120,11 @@
 
     <p id="cartHint" class="field-hint" style="margin-bottom:14px;"></p>
     <div id="cartList" class="med-list"></div>
+
+    <div id="cartActions" class="cart-actions" style="display:none;">
+      <button type="button" id="sendOrderBtn" class="send-order-btn">שליחת רשימת ההזמנות</button>
+      <p id="sendEmailInfo" class="cart-send-info"></p>
+    </div>
   </section>
 </main>
 
@@ -189,6 +194,23 @@
       <div class="modal-actions">
         <button type="button" id="receiveCancelBtn" class="btn-secondary">ביטול</button>
         <button type="submit" class="btn-primary">עדכון מלאי</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="emailModalOverlay" class="modal-overlay">
+  <div class="modal">
+    <h2 id="emailModalTitle">לאן לשלוח את הרשימה?</h2>
+    <form id="emailForm">
+      <p class="field-hint" style="margin-bottom:14px;">הכתובת תישמר במכשיר הזה כדי שלא תצטרכו להזין אותה שוב</p>
+      <div class="field">
+        <label for="emailInput">כתובת מייל</label>
+        <input type="email" id="emailInput" name="emailInput" required placeholder="name@example.com" autocomplete="email">
+      </div>
+      <div class="modal-actions">
+        <button type="button" id="emailCancelBtn" class="btn-secondary">ביטול</button>
+        <button type="submit" id="emailSubmitBtn" class="btn-primary">שמירה ושליחה</button>
       </div>
     </form>
   </div>

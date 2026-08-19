@@ -173,6 +173,20 @@ button{ font-family:var(--font-body); cursor:pointer; border:none; }
 }
 .cart-row-remove:hover{ background:var(--bg-canvas-deep); color:var(--status-danger); }
 
+.cart-actions{ margin-top:6px; }
+.send-order-btn{
+  width:100%; background:var(--teal-deep); color:#fff;
+  font-size:15px; font-weight:600; padding:14px; border-radius:12px;
+}
+.send-order-btn:hover{ background:var(--teal-deep-light); }
+.cart-send-info{
+  margin-top:10px; font-size:12.5px; color:var(--ink-soft); text-align:center;
+}
+.cart-send-info button{
+  background:none; color:var(--teal-deep); font-weight:600; font-size:12.5px;
+  padding:0; text-decoration:underline;
+}
+
 /* floating add button */
 .fab{
   position:fixed; bottom:24px; left:50%; transform:translateX(-50%);

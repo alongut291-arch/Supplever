@@ -84,6 +84,8 @@ const cartListEl = document.getElementById('cartList');
 const cartEmptyStateEl = document.getElementById('cartEmptyState');
 const cartHintEl = document.getElementById('cartHint');
 const cartBadgeEl = document.getElementById('cartBadge');
+const cartActionsEl = document.getElementById('cartActions');
+const sendEmailInfoEl = document.getElementById('sendEmailInfo');
 
 function medCardHTML(med, extraHTML = '') {
   const status = medStatus(med);
@@ -155,6 +157,13 @@ function orderPlanningHTML(med) {
   `;
 }
 
+function cartItemLine(med) {
+  const qtyText = med.orderSnapshotBoxes
+    ? `${boxesLabel(med.orderSnapshotBoxes)} (כ-${med.orderSnapshotPills} כדורים)`
+    : `כ-${med.orderSnapshotPills || 0} כדורים`;
+  return `• ${med.name}${med.dose ? ' · ' + med.dose : ''} — ${qtyText}`;
+}
+
 function cartRowHTML(med) {
   const qtyText = med.orderSnapshotBoxes
     ? `${boxesLabel(med.orderSnapshotBoxes)} להזמנה (כ-${med.orderSnapshotPills} כדורים)`
@@ -222,13 +231,16 @@ function renderCart(sortedMeds) {
     cartListEl.innerHTML = '';
     cartEmptyStateEl.style.display = 'block';
     cartHintEl.style.display = 'none';
+    cartActionsEl.style.display = 'none';
     return;
   }
   cartEmptyStateEl.style.display = 'none';
   cartHintEl.style.display = 'block';
+  cartActionsEl.style.display = 'block';
   const countText = inCart.length === 1 ? 'תרופה אחת ברשימת ההזמנה' : `${inCart.length} תרופות ברשימת ההזמנה`;
   cartHintEl.textContent = `${countText} — מוכן לקחת לבית המרקחת`;
   cartListEl.innerHTML = inCart.map(cartRowHTML).join('');
+  updateSendEmailInfo();
 }
 
 /* ---------- modal ---------- */
@@ -450,6 +462,100 @@ function showToast(msg) {
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2200);
 }
+
+/* ---------- send order list by email ---------- */
+
+const USER_EMAIL_KEY = 'supplever_user_email';
+
+function getUserEmail() {
+  return localStorage.getItem(USER_EMAIL_KEY) || '';
+}
+
+function saveUserEmail(email) {
+  localStorage.setItem(USER_EMAIL_KEY, email);
+}
+
+function updateSendEmailInfo() {
+  const email = getUserEmail();
+  sendEmailInfoEl.innerHTML = email
+    ? `הרשימה תישלח אל ${escapeHtml(email)} · <button type="button" id="changeEmailBtn">שינוי</button>`
+    : '';
+}
+
+function buildOrderMailto(toEmail, cartMeds) {
+  const subject = 'רשימת הזמנות תרופות — Supplever';
+  const lines = cartMeds.map(cartItemLine).join('\n');
+  const body = `רשימת ההזמנות שלי:\n\n${lines}\n\nנשלח מתוך Supplever`;
+  return `mailto:${toEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+function sendOrderListByEmail(cartMeds) {
+  if (cartMeds.length === 0) return;
+  const email = getUserEmail();
+  window.location.href = buildOrderMailto(email, cartMeds);
+  showToast('נפתחה אפליקציית המייל');
+}
+
+function handleSendOrderClick() {
+  const cartMeds = loadMeds().filter(m => m.inOrder);
+  if (cartMeds.length === 0) return;
+  if (getUserEmail()) {
+    sendOrderListByEmail(cartMeds);
+  } else {
+    openEmailModal('send');
+  }
+}
+
+document.getElementById('sendOrderBtn').addEventListener('click', handleSendOrderClick);
+cartActionsEl.addEventListener('click', (e) => {
+  if (e.target.closest('#changeEmailBtn')) openEmailModal('edit');
+});
+
+const emailOverlay = document.getElementById('emailModalOverlay');
+const emailForm = document.getElementById('emailForm');
+const emailInput = document.getElementById('emailInput');
+const emailSubmitBtn = document.getElementById('emailSubmitBtn');
+const emailModalTitleEl = document.getElementById('emailModalTitle');
+let emailModalMode = 'send';
+
+function openEmailModal(mode) {
+  emailModalMode = mode;
+  emailInput.value = getUserEmail();
+  if (mode === 'send') {
+    emailModalTitleEl.textContent = 'לאן לשלוח את הרשימה?';
+    emailSubmitBtn.textContent = 'שמירה ושליחה';
+  } else {
+    emailModalTitleEl.textContent = 'עדכון כתובת מייל';
+    emailSubmitBtn.textContent = 'שמירה';
+  }
+  emailOverlay.classList.add('open');
+  emailInput.focus();
+}
+
+function closeEmailModal() {
+  emailOverlay.classList.remove('open');
+  emailForm.reset();
+}
+
+document.getElementById('emailCancelBtn').addEventListener('click', closeEmailModal);
+emailOverlay.addEventListener('click', (e) => {
+  if (e.target === emailOverlay) closeEmailModal();
+});
+
+emailForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const email = emailInput.value.trim();
+  if (!email) return;
+  saveUserEmail(email);
+  const mode = emailModalMode;
+  closeEmailModal();
+  updateSendEmailInfo();
+  if (mode === 'send') {
+    sendOrderListByEmail(loadMeds().filter(m => m.inOrder));
+  } else {
+    showToast('כתובת המייל עודכנה');
+  }
+});
 
 /* ---------- notifications ---------- */
 
