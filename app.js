@@ -81,7 +81,7 @@ const ordersEmptyStateEl = document.getElementById('ordersEmptyState');
 const ordersHintEl = document.getElementById('ordersHint');
 const orderBadgeEl = document.getElementById('orderBadge');
 
-function medCardHTML(med) {
+function medCardHTML(med, extraHTML = '') {
   const status = medStatus(med);
   const days = daysRemaining(med);
   const fill = stockFillPercent(med);
@@ -101,7 +101,48 @@ function medCardHTML(med) {
         <div class="stock-bar-fill ${status}" style="width:${fill}%"></div>
       </div>
       <p class="med-hint">מלאי נוכחי: ${med.currentStock} כדורים${med.pillsPerBox ? ` (כ-${Math.round((med.currentStock / med.pillsPerBox) * 10) / 10} קופסאות)` : ''} · התראה מ-${formatAlertDays(med.alertDays)} לפני הסוף</p>
+      ${extraHTML}
       <button class="received-btn" data-action="receive" data-id="${med.id}">קיבלתי הזמנה — עדכן מלאי</button>
+    </div>
+  `;
+}
+
+/* ---------- order quantity planning ---------- */
+
+const ORDER_MONTHS_LABELS = { 1: 'חודש', 2: 'חודשיים', 3: '3 חודשים' };
+const orderMonthsByMedId = {};
+
+function calcOrderSuggestion(med, months) {
+  const targetDays = months * 30;
+  const neededPills = Math.ceil(med.dailyRate * targetDays);
+  const neededBoxes = med.pillsPerBox ? Math.ceil(neededPills / med.pillsPerBox) : null;
+  return { neededPills, neededBoxes };
+}
+
+function orderPlanningHTML(med) {
+  const months = orderMonthsByMedId[med.id] || 1;
+  const { neededPills, neededBoxes } = calcOrderSuggestion(med, months);
+
+  const optionsHTML = [1, 2, 3].map(m =>
+    `<option value="${m}" ${m === months ? 'selected' : ''}>${ORDER_MONTHS_LABELS[m]}</option>`
+  ).join('');
+
+  let resultText;
+  if (neededBoxes !== null) {
+    const boxesText = neededBoxes === 1 ? 'קופסה אחת' : `${neededBoxes} קופסאות`;
+    resultText = `כמות להזמנה: ${boxesText} (כ-${neededPills} כדורים)`;
+  } else {
+    resultText = `כמות להזמנה: כ-${neededPills} כדורים`;
+  }
+
+  return `
+    <div class="order-planning">
+      <label class="order-planning-label">
+        להזמין מלאי ל-
+        <select class="order-months-select" data-id="${med.id}">${optionsHTML}</select>
+        קדימה
+      </label>
+      <p class="order-planning-result">${resultText}</p>
     </div>
   `;
 }
@@ -143,7 +184,7 @@ function renderOrders(sortedMeds) {
   ordersHintEl.style.display = 'block';
   const countText = needsOrder.length === 1 ? 'תרופה אחת דורשת הזמנה' : `${needsOrder.length} תרופות דורשות הזמנה`;
   ordersHintEl.textContent = `${countText} — מוכן לקחת לבית המרקחת`;
-  orderListEl.innerHTML = needsOrder.map(medCardHTML).join('');
+  orderListEl.innerHTML = needsOrder.map(med => medCardHTML(med, orderPlanningHTML(med))).join('');
 }
 
 /* ---------- modal ---------- */
@@ -243,6 +284,11 @@ function handleListClick(e) {
     return;
   }
 
+  if (e.target.closest('.order-planning')) {
+    e.stopPropagation();
+    return;
+  }
+
   const card = e.target.closest('.med-card');
   if (card) {
     const meds = loadMeds();
@@ -253,6 +299,13 @@ function handleListClick(e) {
 
 listEl.addEventListener('click', handleListClick);
 orderListEl.addEventListener('click', handleListClick);
+
+orderListEl.addEventListener('change', (e) => {
+  const select = e.target.closest('.order-months-select');
+  if (!select) return;
+  orderMonthsByMedId[select.dataset.id] = parseInt(select.value, 10);
+  render();
+});
 
 /* ---------- tabs ---------- */
 
