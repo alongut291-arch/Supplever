@@ -97,7 +97,7 @@ function medCardHTML(med, extraHTML = '') {
         <div class="med-card-top-left">
           <span class="status-dot status-${status}"></span>
           <div>
-            <p class="med-name">${escapeHtml(med.name)}</p>
+            <p class="med-name" dir="auto">${escapeHtml(med.name)}</p>
             <p class="med-dose">${escapeHtml(med.dose || '')}${med.dose ? ' · ' : ''}${med.dailyRate} ליום</p>
           </div>
         </div>

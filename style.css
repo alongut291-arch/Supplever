@@ -103,14 +103,15 @@ button{ font-family:var(--font-body); cursor:pointer; border:none; }
   cursor:pointer;
 }
 .med-card-top{ display:flex; align-items:flex-start; gap:12px; justify-content:space-between; }
-.med-card-top-left{ display:flex; align-items:flex-start; gap:12px; }
+.med-card-top-left{ display:flex; align-items:flex-start; gap:12px; min-width:0; flex:1; }
+.med-card-top-left > div{ min-width:0; }
 .status-dot{ width:12px; height:12px; border-radius:50%; flex-shrink:0; margin-top:6px; }
 .status-good{ background:var(--status-good); }
 .status-warn{ background:var(--status-warn); }
 .status-danger{ background:var(--status-danger); }
-.med-name{ font-family:var(--font-display); font-size:18px; font-weight:700; }
+.med-name{ font-family:var(--font-display); font-size:18px; font-weight:700; overflow-wrap:break-word; word-break:break-word; unicode-bidi:plaintext; }
 .med-dose{ font-size:13px; color:var(--ink-soft); margin-top:2px; }
-.med-days{ font-size:13px; font-weight:600; white-space:nowrap; }
+.med-days{ font-size:13px; font-weight:600; white-space:nowrap; flex-shrink:0; margin-top:4px; }
 .med-days.good{ color:var(--status-good); }
 .med-days.warn{ color:var(--status-warn); }
 .med-days.danger{ color:var(--status-danger); }
