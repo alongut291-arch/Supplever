@@ -66,6 +66,20 @@ function formatDays(days) {
   return `${rounded} ימים נותרו`;
 }
 
+const DOSE_UNIT_REPLACEMENTS = [
+  [/(\d)\s*mcg\b/gi, '$1 מק״ג'],
+  [/(\d)\s*µg\b/gi, '$1 מק״ג'],
+  [/(\d)\s*mg\b/gi, '$1 מ״ג'],
+  [/(\d)\s*ml\b/gi, '$1 מ״ל'],
+  [/(\d)\s*iu\b/gi, '$1 יב״ל'],
+  [/(\d)\s*g\b/gi, '$1 גרם'],
+];
+
+function normalizeDoseUnits(dose) {
+  if (!dose) return dose;
+  return DOSE_UNIT_REPLACEMENTS.reduce((str, [pattern, replacement]) => str.replace(pattern, replacement), dose);
+}
+
 const ALERT_DAYS_LABELS = { 7: 'שבוע', 14: 'שבועיים', 21: 'שלושה שבועות', 30: 'חודש' };
 
 function formatAlertDays(alertDays) {
@@ -186,20 +200,35 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+const HEBREW_FIRST_CHAR_RE = new RegExp('^[֐-׿]');
+
+function isHebrewName(name) {
+  return HEBREW_FIRST_CHAR_RE.test((name || '').trim());
+}
+
+function sortAlphabetically(meds) {
+  return [...meds].sort((a, b) => {
+    const aHeb = isHebrewName(a.name);
+    const bHeb = isHebrewName(b.name);
+    if (aHeb !== bHeb) return aHeb ? -1 : 1;
+    return a.name.localeCompare(b.name, aHeb ? 'he' : 'en');
+  });
+}
+
 function render() {
   const meds = loadMeds();
-  const sorted = [...meds].sort((a, b) => daysRemaining(a) - daysRemaining(b));
+  const urgencySorted = [...meds].sort((a, b) => daysRemaining(a) - daysRemaining(b));
 
   if (meds.length === 0) {
     listEl.innerHTML = '';
     emptyStateEl.style.display = 'block';
   } else {
     emptyStateEl.style.display = 'none';
-    listEl.innerHTML = sorted.map(med => medCardHTML(med)).join('');
+    listEl.innerHTML = sortAlphabetically(meds).map(med => medCardHTML(med)).join('');
   }
 
-  renderOrders(sorted);
-  renderCart(sorted);
+  renderOrders(urgencySorted);
+  renderCart(urgencySorted);
 }
 
 function renderOrders(sortedMeds) {
@@ -269,6 +298,7 @@ form.pillsPerBox.addEventListener('input', recalcStockFromBoxes);
 form.currentBoxes.addEventListener('input', recalcStockFromBoxes);
 
 function openModal(med = null) {
+  closeSuggestions();
   editingId = med ? med.id : null;
   modalTitle.textContent = med ? 'עריכת תרופה' : 'הוספת תרופה';
   deleteBtn.style.display = med ? 'block' : 'none';
@@ -287,7 +317,91 @@ function closeModal() {
   overlay.classList.remove('open');
   editingId = null;
   form.reset();
+  closeSuggestions();
 }
+
+/* ---------- medication name autocomplete ---------- */
+
+const nameInput = document.getElementById('name');
+const nameSuggestionsEl = document.getElementById('nameSuggestions');
+let activeSuggestionIndex = -1;
+
+function matchMedications(query) {
+  const q = query.trim();
+  if (!q) return [];
+  const qLower = q.toLowerCase();
+  const db = typeof MEDICATIONS_DB !== 'undefined' ? MEDICATIONS_DB : [];
+  return db
+    .filter(m => m.he.startsWith(q) || m.en.toLowerCase().startsWith(qLower))
+    .map(m => ({ ...m, fill: m.he.startsWith(q) ? m.he : m.en }))
+    .sort((a, b) => a.fill.localeCompare(b.fill))
+    .slice(0, 8);
+}
+
+function renderSuggestions(matches) {
+  activeSuggestionIndex = -1;
+  if (matches.length === 0) {
+    closeSuggestions();
+    return;
+  }
+  nameSuggestionsEl.innerHTML = matches.map(m => `
+    <li class="autocomplete-item" data-fill="${escapeHtml(m.fill)}" dir="auto">
+      ${escapeHtml(m.he)}${m.he !== m.en ? ` <span class="ac-en">· ${escapeHtml(m.en)}</span>` : ''}
+    </li>
+  `).join('');
+  nameSuggestionsEl.hidden = false;
+}
+
+function closeSuggestions() {
+  nameSuggestionsEl.hidden = true;
+  nameSuggestionsEl.innerHTML = '';
+  activeSuggestionIndex = -1;
+}
+
+function updateActiveSuggestion(items) {
+  items.forEach((item, i) => item.classList.toggle('active', i === activeSuggestionIndex));
+}
+
+function selectSuggestion(fillValue) {
+  nameInput.value = fillValue;
+  closeSuggestions();
+}
+
+nameInput.addEventListener('input', () => {
+  renderSuggestions(matchMedications(nameInput.value));
+});
+
+nameInput.addEventListener('blur', () => {
+  setTimeout(closeSuggestions, 150);
+});
+
+nameInput.addEventListener('keydown', (e) => {
+  const items = nameSuggestionsEl.querySelectorAll('.autocomplete-item');
+  if (nameSuggestionsEl.hidden || items.length === 0) return;
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    activeSuggestionIndex = Math.min(activeSuggestionIndex + 1, items.length - 1);
+    updateActiveSuggestion(items);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    activeSuggestionIndex = Math.max(activeSuggestionIndex - 1, 0);
+    updateActiveSuggestion(items);
+  } else if (e.key === 'Enter') {
+    if (activeSuggestionIndex >= 0) {
+      e.preventDefault();
+      selectSuggestion(items[activeSuggestionIndex].dataset.fill);
+    }
+  } else if (e.key === 'Escape') {
+    closeSuggestions();
+  }
+});
+
+nameSuggestionsEl.addEventListener('mousedown', (e) => {
+  const item = e.target.closest('.autocomplete-item');
+  if (!item) return;
+  e.preventDefault();
+  selectSuggestion(item.dataset.fill);
+});
 
 document.getElementById('addFab').addEventListener('click', () => openModal());
 document.getElementById('cancelBtn').addEventListener('click', closeModal);
@@ -299,7 +413,7 @@ form.addEventListener('submit', (e) => {
   e.preventDefault();
   const med = {
     name: form.name.value.trim(),
-    dose: form.dose.value.trim(),
+    dose: normalizeDoseUnits(form.dose.value.trim()),
     pillsPerBox: parseFloat(form.pillsPerBox.value),
     dailyRate: parseFloat(form.dailyRate.value),
     currentBoxes: parseFloat(form.currentBoxes.value),
