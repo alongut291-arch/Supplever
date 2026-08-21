@@ -323,6 +323,48 @@ function updatePackHelperVisibility(prefillDefaults) {
   }
 }
 
+/* ---------- dose dropdown (known strengths per medication) ---------- */
+
+const doseSelectEl = document.getElementById('doseSelect');
+
+const DOSE_OTHER_VALUE = '__other__';
+
+function updateDoseOptions() {
+  const entry = findMedicationDbEntry(form.name.value);
+  const doses = entry && Array.isArray(entry.doses) ? entry.doses : null;
+  if (doses && doses.length) {
+    doseSelectEl.innerHTML = '<option value="">בחרו מינון...</option>' +
+      doses.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('') +
+      `<option value="${DOSE_OTHER_VALUE}">אחר (הזנה ידנית)</option>`;
+    if (form.dose.value && !doses.includes(form.dose.value)) {
+      // הערך הקיים לא ברשימה (למשל תרופה שנשמרה עם מינון מותאם אישית) —
+      // משאירים את שדה הטקסט גלוי כדי לא "להסתיר" ערך אמיתי שכבר נשמר
+      doseSelectEl.value = DOSE_OTHER_VALUE;
+      doseSelectEl.hidden = true;
+      form.dose.hidden = false;
+    } else {
+      if (form.dose.value) doseSelectEl.value = form.dose.value;
+      doseSelectEl.hidden = false;
+      form.dose.hidden = true;
+    }
+  } else {
+    doseSelectEl.innerHTML = '';
+    doseSelectEl.hidden = true;
+    form.dose.hidden = false;
+  }
+}
+
+doseSelectEl.addEventListener('change', () => {
+  if (doseSelectEl.value === DOSE_OTHER_VALUE) {
+    doseSelectEl.hidden = true;
+    form.dose.hidden = false;
+    form.dose.value = '';
+    form.dose.focus();
+  } else if (doseSelectEl.value) {
+    form.dose.value = doseSelectEl.value;
+  }
+});
+
 function recalcPillsPerBoxFromPack() {
   const subUnits = parseFloat(packSubUnitsInput.value);
   const unitsPerSub = parseFloat(packUnitsPerSubInput.value);
@@ -334,7 +376,10 @@ function recalcPillsPerBoxFromPack() {
 
 packSubUnitsInput.addEventListener('input', recalcPillsPerBoxFromPack);
 packUnitsPerSubInput.addEventListener('input', recalcPillsPerBoxFromPack);
-form.name.addEventListener('input', () => updatePackHelperVisibility(true));
+form.name.addEventListener('input', () => {
+  updatePackHelperVisibility(true);
+  updateDoseOptions();
+});
 
 function openModal(med = null) {
   closeSuggestions();
@@ -351,6 +396,7 @@ function openModal(med = null) {
   packSubUnitsInput.value = '';
   packUnitsPerSubInput.value = '';
   updatePackHelperVisibility(false);
+  updateDoseOptions();
   overlay.classList.add('open');
   form.name.focus();
 }
@@ -407,6 +453,7 @@ function updateActiveSuggestion(items) {
 function selectSuggestion(fillValue) {
   nameInput.value = fillValue;
   updatePackHelperVisibility(true);
+  updateDoseOptions();
   closeSuggestions();
 }
 
