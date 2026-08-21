@@ -2,6 +2,13 @@
 // Not exhaustive — extend this list over time as needed.
 // Each entry: he = Hebrew commercial name in Israel, en = English/generic name.
 // Sources verified via web search (Israeli pharmacy/health sites, manufacturer sites) — Aug 2026.
+//
+// Entries with type: 'insulin-pen' auto-open the "box → pens → units" pack
+// helper in the add/edit form, pre-filled with defaultSubUnits (pens per box)
+// and defaultUnitsPerSub (dose units per pen). The defaults assume the most
+// common U-100 packaging (5 pens/box, 3 mL = 300 units/pen) — some brands are
+// also sold in U-200/U-300 concentrations with different numbers, which the
+// user can edit in the pack helper.
 const MEDICATIONS_DB = [
   // סוכרת — תרופות
   { he: 'גלוקופאז', en: 'Glucophage' },
@@ -14,10 +21,10 @@ const MEDICATIONS_DB = [
   { he: 'יוקריאס', en: 'Eucreas' },
   { he: 'קומביגלייז', en: 'Komboglyze' },
   { he: 'גליקסמבי', en: 'Glyxambi' },
-  { he: 'לנטוס', en: 'Lantus' },
-  { he: 'נובורפיד', en: 'NovoRapid' },
-  { he: 'טרסיבה', en: 'Tresiba' },
-  { he: 'הומלוג', en: 'Humalog' },
+  { he: 'לנטוס', en: 'Lantus', type: 'insulin-pen', defaultSubUnits: 5, defaultUnitsPerSub: 300 },
+  { he: 'נובורפיד', en: 'NovoRapid', type: 'insulin-pen', defaultSubUnits: 5, defaultUnitsPerSub: 300 },
+  { he: 'טרסיבה', en: 'Tresiba', type: 'insulin-pen', defaultSubUnits: 5, defaultUnitsPerSub: 300 },
+  { he: 'הומלוג', en: 'Humalog', type: 'insulin-pen', defaultSubUnits: 5, defaultUnitsPerSub: 300 },
 
   // סוכרת — ציוד תומך
   { he: 'רצועות בדיקת סוכר', en: 'Test Strips' },

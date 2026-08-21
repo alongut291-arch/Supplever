@@ -297,6 +297,45 @@ function recalcStockFromBoxes() {
 form.pillsPerBox.addEventListener('input', recalcStockFromBoxes);
 form.currentBoxes.addEventListener('input', recalcStockFromBoxes);
 
+/* ---------- pack helper (box → sub-units, e.g. pens → dose units) ---------- */
+/* Only shown when the typed/selected name matches a MEDICATIONS_DB entry
+   with type: 'insulin-pen' — see medications-db.js. */
+
+const packHelperEl = document.getElementById('packHelper');
+const packSubUnitsInput = document.getElementById('packSubUnits');
+const packUnitsPerSubInput = document.getElementById('packUnitsPerSub');
+
+function findMedicationDbEntry(name) {
+  const n = (name || '').trim();
+  if (!n) return null;
+  const db = typeof MEDICATIONS_DB !== 'undefined' ? MEDICATIONS_DB : [];
+  return db.find(m => m.he === n || m.en === n) || null;
+}
+
+function updatePackHelperVisibility(prefillDefaults) {
+  const entry = findMedicationDbEntry(form.name.value);
+  const isInsulinPen = !!entry && entry.type === 'insulin-pen';
+  packHelperEl.hidden = !isInsulinPen;
+  if (isInsulinPen && prefillDefaults) {
+    packSubUnitsInput.value = entry.defaultSubUnits || '';
+    packUnitsPerSubInput.value = entry.defaultUnitsPerSub || '';
+    recalcPillsPerBoxFromPack();
+  }
+}
+
+function recalcPillsPerBoxFromPack() {
+  const subUnits = parseFloat(packSubUnitsInput.value);
+  const unitsPerSub = parseFloat(packUnitsPerSubInput.value);
+  if (!isNaN(subUnits) && subUnits > 0 && !isNaN(unitsPerSub) && unitsPerSub > 0) {
+    form.pillsPerBox.value = subUnits * unitsPerSub;
+    recalcStockFromBoxes();
+  }
+}
+
+packSubUnitsInput.addEventListener('input', recalcPillsPerBoxFromPack);
+packUnitsPerSubInput.addEventListener('input', recalcPillsPerBoxFromPack);
+form.name.addEventListener('input', () => updatePackHelperVisibility(true));
+
 function openModal(med = null) {
   closeSuggestions();
   editingId = med ? med.id : null;
@@ -309,6 +348,9 @@ function openModal(med = null) {
   form.currentBoxes.value = med ? (med.currentBoxes ?? '') : '';
   form.currentStock.value = med ? med.currentStock : '';
   form.alertDays.value = med ? med.alertDays : getDefaultAlertDays();
+  packSubUnitsInput.value = '';
+  packUnitsPerSubInput.value = '';
+  updatePackHelperVisibility(false);
   overlay.classList.add('open');
   form.name.focus();
 }
@@ -364,6 +406,7 @@ function updateActiveSuggestion(items) {
 
 function selectSuggestion(fillValue) {
   nameInput.value = fillValue;
+  updatePackHelperVisibility(true);
   closeSuggestions();
 }
 
