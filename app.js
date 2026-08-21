@@ -328,40 +328,51 @@ function updatePackHelperVisibility(prefillDefaults) {
 const doseSelectEl = document.getElementById('doseSelect');
 
 const DOSE_OTHER_VALUE = '__other__';
+let currentDoseOptions = null;
+
+function showDoseAsSelect() {
+  if (form.dose.value) doseSelectEl.value = form.dose.value;
+  doseSelectEl.hidden = false;
+  form.dose.hidden = true;
+}
+
+function showDoseAsManual() {
+  // כשיש רשימת מינונים ידועה, החץ הנגלל נשאר גלוי גם במצב "אחר" כדי
+  // שאפשר יהיה לבחור מחדש מהרשימה בלי כפתור נפרד — רק שדה הטקסט מתווסף לצידו
+  doseSelectEl.hidden = !currentDoseOptions;
+  form.dose.hidden = false;
+}
 
 function updateDoseOptions() {
   const entry = findMedicationDbEntry(form.name.value);
   const doses = entry && Array.isArray(entry.doses) ? entry.doses : null;
-  if (doses && doses.length) {
+  currentDoseOptions = doses && doses.length ? doses : null;
+  if (currentDoseOptions) {
     doseSelectEl.innerHTML = '<option value="">בחרו מינון...</option>' +
-      doses.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('') +
+      currentDoseOptions.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('') +
       `<option value="${DOSE_OTHER_VALUE}">אחר (הזנה ידנית)</option>`;
-    if (form.dose.value && !doses.includes(form.dose.value)) {
+    if (form.dose.value && !currentDoseOptions.includes(form.dose.value)) {
       // הערך הקיים לא ברשימה (למשל תרופה שנשמרה עם מינון מותאם אישית) —
       // משאירים את שדה הטקסט גלוי כדי לא "להסתיר" ערך אמיתי שכבר נשמר
       doseSelectEl.value = DOSE_OTHER_VALUE;
-      doseSelectEl.hidden = true;
-      form.dose.hidden = false;
+      showDoseAsManual();
     } else {
-      if (form.dose.value) doseSelectEl.value = form.dose.value;
-      doseSelectEl.hidden = false;
-      form.dose.hidden = true;
+      showDoseAsSelect();
     }
   } else {
     doseSelectEl.innerHTML = '';
-    doseSelectEl.hidden = true;
-    form.dose.hidden = false;
+    showDoseAsManual();
   }
 }
 
 doseSelectEl.addEventListener('change', () => {
   if (doseSelectEl.value === DOSE_OTHER_VALUE) {
-    doseSelectEl.hidden = true;
-    form.dose.hidden = false;
+    showDoseAsManual();
     form.dose.value = '';
     form.dose.focus();
   } else if (doseSelectEl.value) {
     form.dose.value = doseSelectEl.value;
+    showDoseAsSelect();
   }
 });
 
