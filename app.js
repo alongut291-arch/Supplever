@@ -791,10 +791,6 @@ const NOTIFY_DISMISSED_KEY = 'supplever_notify_dismissed';
 const NOTIFY_REQUESTED_KEY = 'supplever_notify_requested';
 const notifyBanner = document.getElementById('notifyBanner');
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function updateNotifyBanner() {
   if (!('Notification' in window)) {
     notifyBanner.hidden = true;
@@ -832,9 +828,15 @@ async function showSystemNotification(title, body) {
 async function checkAndNotify() {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
+  // ברגע שתרופה חוזרת למלאי תקין (הוזמנה/עודכנה), מאפסים את הדגל — כדי
+  // שבפעם הבאה שהיא תגיע שוב למצב "דורש הזמנה" תישלח עליה התראה חדשה,
+  // חד-פעמית גם היא.
+  loadMeds()
+    .filter(med => medStatus(med) === 'good' && med.notifiedForShortage)
+    .forEach(med => updateMed(med.id, { notifiedForShortage: false }));
+
   const meds = loadMeds();
-  const today = todayStr();
-  const due = meds.filter(med => medStatus(med) !== 'good' && med.lastNotifiedDate !== today);
+  const due = meds.filter(med => medStatus(med) !== 'good' && !med.notifiedForShortage);
   if (due.length === 0) return;
 
   if (due.length === 1) {
@@ -850,7 +852,7 @@ async function checkAndNotify() {
     );
   }
 
-  due.forEach(med => updateMed(med.id, { lastNotifiedDate: today }));
+  due.forEach(med => updateMed(med.id, { notifiedForShortage: true }));
 }
 
 document.getElementById('enableNotifyBtn').addEventListener('click', async () => {
@@ -873,3 +875,8 @@ document.getElementById('dismissNotifyBtn').addEventListener('click', () => {
 render();
 updateNotifyBanner();
 registerServiceWorker().then(() => checkAndNotify());
+
+// אם יש תרופה שדורשת הזמנה, זה מה שהמשתמש צריך לראות ראשון בפתיחת האפליקציה
+if (loadMeds().some(med => medStatus(med) !== 'good')) {
+  switchTab('orders');
+}
