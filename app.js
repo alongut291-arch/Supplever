@@ -215,6 +215,17 @@ function sortAlphabetically(meds) {
   });
 }
 
+// dir="auto" on .med-name flips English names to a left-to-right paragraph,
+// which also flips text-align to "start"=left. We want English names hugging
+// the right edge like Hebrew ones do — but only when they fit on one line;
+// forcing right-align on a wrapped multi-line English name looks jagged.
+function markSingleLineNames(container) {
+  container.querySelectorAll('.med-name').forEach((el) => {
+    const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || el.offsetHeight;
+    el.classList.toggle('single-line', el.scrollHeight <= lineHeight * 1.4);
+  });
+}
+
 function render() {
   const meds = loadMeds();
   const urgencySorted = [...meds].sort((a, b) => daysRemaining(a) - daysRemaining(b));
@@ -225,6 +236,7 @@ function render() {
   } else {
     emptyStateEl.style.display = 'none';
     listEl.innerHTML = sortAlphabetically(meds).map(med => medCardHTML(med)).join('');
+    markSingleLineNames(listEl);
   }
 
   renderOrders(urgencySorted);
@@ -248,6 +260,7 @@ function renderOrders(sortedMeds) {
   const countText = needsOrder.length === 1 ? 'תרופה אחת דורשת הזמנה' : `${needsOrder.length} תרופות דורשות הזמנה`;
   ordersHintEl.textContent = `${countText} — מוכן לקחת לבית המרקחת`;
   orderListEl.innerHTML = needsOrder.map(med => medCardHTML(med, orderPlanningHTML(med))).join('');
+  markSingleLineNames(orderListEl);
 }
 
 function renderCart(sortedMeds) {
