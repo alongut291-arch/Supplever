@@ -94,7 +94,12 @@ const orderListEl = document.getElementById('orderList');
 const ordersEmptyStateEl = document.getElementById('ordersEmptyState');
 const ordersHintEl = document.getElementById('ordersHint');
 const orderBadgeEl = document.getElementById('orderBadge');
-const cartListEl = document.getElementById('cartList');
+const cartListPendingEl = document.getElementById('cartListPending');
+const cartPendingLabelEl = document.getElementById('cartPendingLabel');
+const cartPendingCountEl = document.getElementById('cartPendingCount');
+const cartListSentEl = document.getElementById('cartListSent');
+const cartSentLabelEl = document.getElementById('cartSentLabel');
+const cartSentCountEl = document.getElementById('cartSentCount');
 const cartEmptyStateEl = document.getElementById('cartEmptyState');
 const cartHintEl = document.getElementById('cartHint');
 const cartBadgeEl = document.getElementById('cartBadge');
@@ -178,16 +183,32 @@ function cartItemLine(med) {
   return `• ${med.name}${med.dose ? ' · ' + med.dose : ''} — ${qtyText}`;
 }
 
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function sentDateText(dateStr) {
+  const diffDays = Math.round((new Date(todayStr()) - new Date(dateStr)) / 86400000);
+  if (diffDays <= 0) return 'נשלחה היום';
+  if (diffDays === 1) return 'נשלחה אתמול';
+  return `נשלחה לפני ${diffDays} ימים`;
+}
+
 function cartRowHTML(med) {
   const qtyText = med.orderSnapshotBoxes
     ? `${boxesLabel(med.orderSnapshotBoxes)} להזמנה (כ-${med.orderSnapshotPills} כדורים)`
     : `כ-${med.orderSnapshotPills || 0} כדורים להזמנה`;
+  const isSent = !!med.orderSentDate;
+  const sentLineHTML = isSent
+    ? `<p class="cart-row-sent-date">✓ ${sentDateText(med.orderSentDate)}</p>`
+    : '';
 
   return `
-    <div class="cart-row" data-id="${med.id}">
+    <div class="cart-row${isSent ? ' is-sent' : ''}" data-id="${med.id}">
       <div class="cart-row-info">
         <p class="cart-row-name">${escapeHtml(med.name)}${med.dose ? ` · ${escapeHtml(med.dose)}` : ''}</p>
         <p class="cart-row-qty">${qtyText}</p>
+        ${sentLineHTML}
       </div>
       <button class="cart-row-remove" data-action="toggle-order" data-id="${med.id}" aria-label="הסר מרשימת ההזמנה">✕</button>
     </div>
@@ -270,7 +291,10 @@ function renderCart(sortedMeds) {
   cartBadgeEl.hidden = inCart.length === 0;
 
   if (inCart.length === 0) {
-    cartListEl.innerHTML = '';
+    cartListPendingEl.innerHTML = '';
+    cartListSentEl.innerHTML = '';
+    cartPendingLabelEl.hidden = true;
+    cartSentLabelEl.hidden = true;
     cartEmptyStateEl.style.display = 'block';
     cartHintEl.style.display = 'none';
     cartActionsEl.style.display = 'none';
@@ -281,7 +305,20 @@ function renderCart(sortedMeds) {
   cartActionsEl.style.display = 'block';
   const countText = inCart.length === 1 ? 'תרופה אחת ברשימת ההזמנה' : `${inCart.length} תרופות ברשימת ההזמנה`;
   cartHintEl.textContent = `${countText} — מוכן לקחת לבית המרקחת`;
-  cartListEl.innerHTML = inCart.map(cartRowHTML).join('');
+
+  const pending = inCart.filter(med => !med.orderSentDate);
+  const sent = inCart.filter(med => med.orderSentDate);
+
+  // כל עוד שום דבר לא נשלח, נשארים במראה הרגיל של רשימה אחת בלי כותרות —
+  // הפיצול לשתי קבוצות מופיע רק אחרי שליחה ראשונה, כשיש בפועל מה להבחין ביניהם.
+  cartPendingLabelEl.hidden = sent.length === 0 || pending.length === 0;
+  cartPendingCountEl.textContent = pending.length;
+  cartListPendingEl.innerHTML = pending.map(cartRowHTML).join('');
+
+  cartSentLabelEl.hidden = sent.length === 0;
+  cartSentCountEl.textContent = sent.length;
+  cartListSentEl.innerHTML = sent.map(cartRowHTML).join('');
+
   updateSendEmailInfo();
 }
 
@@ -580,7 +617,7 @@ function handleListClick(e) {
         const { neededPills, neededBoxes } = calcOrderSuggestion(med, months);
         updateMed(med.id, { inOrder: true, orderSnapshotBoxes: neededBoxes, orderSnapshotPills: neededPills });
       } else {
-        updateMed(med.id, { inOrder: false });
+        updateMed(med.id, { inOrder: false, orderSentDate: null });
       }
       render();
       showToast(newState ? 'נוספה לרשימת ההזמנה' : 'הוסרה מרשימת ההזמנה');
@@ -603,7 +640,8 @@ function handleListClick(e) {
 
 listEl.addEventListener('click', handleListClick);
 orderListEl.addEventListener('click', handleListClick);
-cartListEl.addEventListener('click', handleListClick);
+cartListPendingEl.addEventListener('click', handleListClick);
+cartListSentEl.addEventListener('click', handleListClick);
 
 function handleMonthsChange(e) {
   const select = e.target.closest('.order-months-select');
@@ -613,7 +651,8 @@ function handleMonthsChange(e) {
 }
 
 orderListEl.addEventListener('change', handleMonthsChange);
-cartListEl.addEventListener('change', handleMonthsChange);
+cartListPendingEl.addEventListener('change', handleMonthsChange);
+cartListSentEl.addEventListener('change', handleMonthsChange);
 
 /* ---------- tabs ---------- */
 
@@ -676,6 +715,7 @@ receiveForm.addEventListener('submit', (e) => {
     currentStock: med.currentStock + boxesReceived * pillsPerBox,
     currentBoxes: (med.currentBoxes || 0) + boxesReceived,
     inOrder: false,
+    orderSentDate: null,
   });
   closeReceiveModal();
   render();
@@ -721,6 +761,9 @@ function sendOrderListByEmail(cartMeds) {
   if (cartMeds.length === 0) return;
   const email = getUserEmail();
   window.location.href = buildOrderMailto(email, cartMeds);
+  const today = todayStr();
+  cartMeds.forEach(med => updateMed(med.id, { orderSentDate: today }));
+  render();
   showToast('נפתחה אפליקציית המייל');
 }
 

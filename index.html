@@ -119,12 +119,17 @@
     </div>
 
     <p id="cartHint" class="field-hint" style="margin-bottom:14px;"></p>
-    <div id="cartList" class="med-list"></div>
+
+    <p id="cartPendingLabel" class="section-label" hidden>טרם נשלחה הזמנה <span id="cartPendingCount" class="count"></span></p>
+    <div id="cartListPending" class="med-list"></div>
 
     <div id="cartActions" class="cart-actions" style="display:none;">
       <button type="button" id="sendOrderBtn" class="send-order-btn">שליחת רשימת ההזמנות</button>
       <p id="sendEmailInfo" class="cart-send-info"></p>
     </div>
+
+    <p id="cartSentLabel" class="section-label sent" hidden>כבר נשלחה הזמנה <span id="cartSentCount" class="count"></span></p>
+    <div id="cartListSent" class="med-list"></div>
   </section>
 </main>
 
