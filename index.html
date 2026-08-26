@@ -163,10 +163,10 @@
             <input type="number" id="packUnitsPerSub" step="1" min="1" placeholder="300">
           </div>
         </div>
-        <p class="field-hint">ימלא אוטומטית את "כמות כדורים בקופסה" למטה — אפשר לתקן את המספרים אם הריכוז שונה</p>
+        <p class="field-hint">ימלא אוטומטית את "כמות יחידות בקופסה" למטה — אפשר לתקן את המספרים אם הריכוז שונה</p>
       </div>
       <div class="field">
-        <label for="pillsPerBox">כמות כדורים בקופסה</label>
+        <label for="pillsPerBox">כמות יחידות בקופסה</label>
         <input type="number" id="pillsPerBox" name="pillsPerBox" step="1" min="1" required>
       </div>
 
@@ -182,7 +182,7 @@
       <!-- תדירות: כל יום -->
       <div class="freq-block" id="freqBlockDaily">
         <div class="field">
-          <label for="dailyRate">כדורים ביום</label>
+          <label for="dailyRate">יחידות ביום</label>
           <input type="number" id="dailyRate" name="dailyRate" step="0.5" min="0.5">
         </div>
       </div>
@@ -191,7 +191,7 @@
       <div class="freq-block" id="freqBlockWeekly" hidden>
         <div class="field-row">
           <div class="field">
-            <label for="weeklyRate">כדורים בכל נטילה</label>
+            <label for="weeklyRate">יחידות בכל נטילה</label>
             <input type="number" id="weeklyRate" name="weeklyRate" step="0.5" min="0.5">
           </div>
           <div class="field">
@@ -216,7 +216,7 @@
           <button type="button" class="preset" data-on="7" data-off="7">שבוע / שבוע</button>
         </div>
         <div class="field">
-          <label for="cycleRate">כדורים ביום (בימי הנטילה)</label>
+          <label for="cycleRate">יחידות ביום (בימי הנטילה)</label>
           <input type="number" id="cycleRate" name="cycleRate" step="0.5" min="0.5">
         </div>
         <div class="field-row">
@@ -235,18 +235,13 @@
           <p class="field-hint">בזכות התאריך הזה האפליקציה יודעת אם אתם כרגע בנטילה או בהפסקה, וסופרת ימים מדויקים</p>
         </div>
       </div>
-
-      <div class="rate-summary">
-        <p class="rate-summary-main" id="rateSummaryMain">—</p>
-        <p class="rate-summary-sub" id="rateSummarySub"></p>
-      </div>
       <div class="field-row">
         <div class="field">
           <label for="currentBoxes">מלאי קופסאות נוכחי</label>
           <input type="number" id="currentBoxes" name="currentBoxes" step="any" min="0" required>
         </div>
         <div class="field">
-          <label for="currentStock">מלאי כדורים נוכחי</label>
+          <label for="currentStock">מלאי יחידות נוכחי</label>
           <input type="number" id="currentStock" name="currentStock" step="any" min="0" required>
           <p class="field-hint">מחושב אוטומטית לפי מספר הקופסאות — אפשר לתקן ידנית אם המלאי הנוכחי שונה</p>
         </div>

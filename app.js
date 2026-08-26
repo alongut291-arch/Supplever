@@ -38,7 +38,7 @@ function deleteMed(id) {
 /* ---------- domain logic ---------- */
 
 /* תדירות נטילה.
-   med.dailyRate = כדורים ביום שבו באמת נוטלים (בכל שלושת המצבים).
+   med.dailyRate = יחידות ביום שבו באמת נוטלים (בכל שלושת המצבים).
    תרופה שנשמרה לפני הפיצ'ר הזה היא פשוט freqMode='daily' — לכן חישוב זהה לגמרי. */
 
 const MS_DAY = 86400000;
@@ -98,7 +98,7 @@ function cyclePosition(med, when = startOfToday()) {
   return { idx, on, off, len, isTaking: idx < on };
 }
 
-/* כמה ימים עד היום הראשון שבו לא יהיה כדור לקחת.
+/* כמה ימים עד היום הראשון שבו לא תהיה יחידה לקחת.
    מדלג על ימי ההפסקה — ולכן שונה מ"מתי הקופסה תתרוקן". */
 function cycleDaysRemaining(med) {
   const pos = cyclePosition(med);
@@ -132,7 +132,7 @@ function freqText(med) {
   const mode = freqMode(med);
   if (mode === 'weekly') {
     const times = med.timesPerWeek || 1;
-    const pills = med.dailyRate === 1 ? '' : `${med.dailyRate} כדורים · `;
+    const pills = med.dailyRate === 1 ? '' : `${med.dailyRate} יחידות · `;
     return pills + (times === 1 ? 'פעם בשבוע' : `${times} פעמים בשבוע`);
   }
   if (mode === 'cycle') {
@@ -239,7 +239,7 @@ function medCardHTML(med, extraHTML = '') {
       <div class="stock-bar">
         <div class="stock-bar-fill ${status}" style="width:${fill}%"></div>
       </div>
-      <p class="med-hint">מלאי נוכחי: ${med.currentStock} כדורים${med.pillsPerBox ? ` (כ-${Math.round((med.currentStock / med.pillsPerBox) * 10) / 10} קופסאות)` : ''} · התראה מ-${formatAlertDays(med.alertDays)} לפני הסוף</p>
+      <p class="med-hint">מלאי נוכחי: ${med.currentStock} יחידות${med.pillsPerBox ? ` (כ-${Math.round((med.currentStock / med.pillsPerBox) * 10) / 10} קופסאות)` : ''} · התראה מ-${formatAlertDays(med.alertDays)} לפני הסוף</p>
       ${extraHTML}
       <button class="received-btn" data-action="receive" data-id="${med.id}">קיבלתי הזמנה — עדכן מלאי</button>
     </div>
@@ -271,8 +271,8 @@ function orderPlanningHTML(med) {
   ).join('');
 
   const resultText = neededBoxes !== null
-    ? `כמות להזמנה: ${boxesLabel(neededBoxes)} (כ-${neededPills} כדורים)`
-    : `כמות להזמנה: כ-${neededPills} כדורים`;
+    ? `כמות להזמנה: ${boxesLabel(neededBoxes)} (כ-${neededPills} יחידות)`
+    : `כמות להזמנה: כ-${neededPills} יחידות`;
 
   const toggleLabel = med.inOrder ? '✓ ברשימת ההזמנה — הסר' : '+ הוסף להזמנה';
   const toggleClass = med.inOrder ? 'toggle-order-btn in-order' : 'toggle-order-btn';
@@ -292,8 +292,8 @@ function orderPlanningHTML(med) {
 
 function cartItemLine(med) {
   const qtyText = med.orderSnapshotBoxes
-    ? `${boxesLabel(med.orderSnapshotBoxes)} (כ-${med.orderSnapshotPills} כדורים)`
-    : `כ-${med.orderSnapshotPills || 0} כדורים`;
+    ? `${boxesLabel(med.orderSnapshotBoxes)} (כ-${med.orderSnapshotPills} יחידות)`
+    : `כ-${med.orderSnapshotPills || 0} יחידות`;
   return `• ${med.name}${med.dose ? ' · ' + med.dose : ''} — ${qtyText}`;
 }
 
@@ -310,8 +310,8 @@ function sentDateText(dateStr) {
 
 function cartRowHTML(med) {
   const qtyText = med.orderSnapshotBoxes
-    ? `${boxesLabel(med.orderSnapshotBoxes)} להזמנה (כ-${med.orderSnapshotPills} כדורים)`
-    : `כ-${med.orderSnapshotPills || 0} כדורים להזמנה`;
+    ? `${boxesLabel(med.orderSnapshotBoxes)} להזמנה (כ-${med.orderSnapshotPills} יחידות)`
+    : `כ-${med.orderSnapshotPills || 0} יחידות להזמנה`;
   const isSent = !!med.orderSentDate;
   const sentLineHTML = isSent
     ? `<p class="cart-row-sent-date">✓ ${sentDateText(med.orderSentDate)}</p>`
@@ -468,9 +468,6 @@ const freqBlocks = {
   weekly: document.getElementById('freqBlockWeekly'),
   cycle: document.getElementById('freqBlockCycle'),
 };
-const rateSummaryMainEl = document.getElementById('rateSummaryMain');
-const rateSummarySubEl = document.getElementById('rateSummarySub');
-
 /* קוראים מהטופס למבנה שהלוגיקה יודעת לעבוד איתו, בלי לשמור עדיין */
 function readFreqFromForm() {
   const mode = form.freqMode.value;
@@ -497,39 +494,18 @@ function readFreqFromForm() {
   return freq;
 }
 
-function formatAvgRate(avg) {
-  const rounded = Math.round(avg * 100) / 100;
-  return rounded === 1 ? 'כדור אחד ליום' : `כ-${rounded} כדורים ליום`;
-}
-
 function updateFreqUI() {
   const mode = form.freqMode.value;
   Object.keys(freqBlocks).forEach(key => { freqBlocks[key].hidden = key !== mode; });
 
+  if (mode !== 'cycle') return;
+
+  // מסמנים את התבנית המוכנה שתואמת למספרים שבשדות
   const freq = readFreqFromForm();
-  const avg = avgDailyRate(freq);
-
-  rateSummaryMainEl.textContent = avg > 0
-    ? `ממוצע: ${formatAvgRate(avg)}`
-    : 'ממוצע: נשלים את השדות למעלה';
-
-  let sub = '';
-  if (mode === 'cycle' && avg > 0) {
-    const pos = cyclePosition(freq);
-    if (!pos) {
-      sub = 'בלי תאריך התחלה אפשר לחשב רק ממוצע, לא תאריך מדויק';
-    } else {
-      const now = startOfToday();
-      sub = pos.isTaking
-        ? `כרגע בתקופת נטילה · ההפסקה מתחילה ב-${formatShortDate(addDays(now, pos.on - pos.idx))}`
-        : `כרגע בהפסקה · הנטילה חוזרת ב-${formatShortDate(addDays(now, pos.len - pos.idx))}`;
-    }
-    document.querySelectorAll('#cyclePresets .preset').forEach(btn => {
-      btn.classList.toggle('on',
-        +btn.dataset.on === freq.cycleOnDays && +btn.dataset.off === freq.cycleOffDays);
-    });
-  }
-  rateSummarySubEl.textContent = sub;
+  document.querySelectorAll('#cyclePresets .preset').forEach(btn => {
+    btn.classList.toggle('on',
+      +btn.dataset.on === freq.cycleOnDays && +btn.dataset.off === freq.cycleOffDays);
+  });
 }
 
 form.freqMode.addEventListener('change', updateFreqUI);
@@ -899,8 +875,8 @@ function openReceiveModal(id) {
   const med = loadMeds().find(m => m.id === id);
   if (!med) return;
   receivingId = id;
-  const perBoxHint = med.pillsPerBox ? ` · כל קופסה = ${med.pillsPerBox} כדורים` : '';
-  receiveMedNameEl.textContent = `${med.name} · מלאי נוכחי: ${med.currentStock} כדורים${perBoxHint}`;
+  const perBoxHint = med.pillsPerBox ? ` · כל קופסה = ${med.pillsPerBox} יחידות` : '';
+  receiveMedNameEl.textContent = `${med.name} · מלאי נוכחי: ${med.currentStock} יחידות${perBoxHint}`;
   receiveForm.reset();
   receiveOverlay.classList.add('open');
   receiveForm.receiveBoxes.focus();
