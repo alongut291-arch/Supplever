@@ -307,3 +307,32 @@ button{ font-family:var(--font-body); cursor:pointer; border:none; }
   z-index:150;
 }
 .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ---------- תדירות נטילה מחזורית ---------- */
+.freq-block[hidden]{ display:none; }
+
+.preset-row{ display:flex; gap:7px; flex-wrap:wrap; margin-bottom:14px; }
+.preset{
+  font-family:var(--font-body); font-size:12.5px; font-weight:600;
+  color:var(--teal-deep); background:var(--card-bg);
+  border:1px solid var(--border-soft); border-radius:999px;
+  padding:6px 12px;
+}
+.preset:hover{ background:var(--bg-canvas-deep); }
+.preset.on{ background:var(--teal-deep); color:#fff; border-color:var(--teal-deep); }
+
+.rate-summary{
+  margin-bottom:16px; padding:12px 14px; border-radius:10px;
+  background:rgba(31,74,67,0.06); border:1px solid rgba(31,74,67,0.15);
+}
+.rate-summary-main{ font-size:13.5px; font-weight:600; color:var(--teal-deep); }
+.rate-summary-sub{ font-size:12.5px; color:var(--ink-soft); margin-top:6px; }
+.rate-summary-sub:empty{ display:none; }
+
+.cycle-chip{
+  display:inline-flex; align-items:center; gap:6px;
+  margin-top:9px; padding:5px 11px; border-radius:999px;
+  font-size:12px; font-weight:600;
+}
+.cycle-chip.pause{ background:rgba(217,143,78,0.15); color:var(--clay-dark); }
+.cycle-chip.active{ background:rgba(31,74,67,0.09); color:var(--teal-deep); }

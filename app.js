@@ -37,9 +37,122 @@ function deleteMed(id) {
 
 /* ---------- domain logic ---------- */
 
+/* תדירות נטילה.
+   med.dailyRate = כדורים ביום שבו באמת נוטלים (בכל שלושת המצבים).
+   תרופה שנשמרה לפני הפיצ'ר הזה היא פשוט freqMode='daily' — לכן חישוב זהה לגמרי. */
+
+const MS_DAY = 86400000;
+
+function freqMode(med) {
+  return med.freqMode || 'daily';
+}
+
+/* המספר האחד שכל שאר האפליקציה עובדת איתו */
+function avgDailyRate(med) {
+  const rate = med.dailyRate;
+  if (!rate || rate <= 0) return 0;
+  if (freqMode(med) === 'weekly') {
+    return rate * (med.timesPerWeek || 1) / 7;
+  }
+  if (freqMode(med) === 'cycle') {
+    const on = med.cycleOnDays || 0;
+    const off = med.cycleOffDays || 0;
+    if (on <= 0 || on + off <= 0) return rate;
+    return rate * on / (on + off);
+  }
+  return rate;
+}
+
+function startOfToday() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function addDays(date, n) {
+  const d = new Date(date.getTime());
+  d.setDate(d.getDate() + n);
+  return d;
+}
+
+function parseDateInput(value) {
+  const parts = (value || '').split('-');
+  if (parts.length !== 3) return null;
+  const d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function formatShortDate(date) {
+  return `${date.getDate()}.${date.getMonth() + 1}`;
+}
+
+/* איפה במחזור אנחנו היום: 0..onDays-1 = ימי נטילה, מעבר לזה = הפסקה */
+function cyclePosition(med, when = startOfToday()) {
+  const start = parseDateInput(med.cycleStart);
+  const on = med.cycleOnDays || 0;
+  const off = med.cycleOffDays || 0;
+  const len = on + off;
+  if (!start || len <= 0) return null;
+  let idx = Math.floor((when - start) / MS_DAY) % len;
+  if (idx < 0) idx += len;
+  return { idx, on, off, len, isTaking: idx < on };
+}
+
+/* כמה ימים עד היום הראשון שבו לא יהיה כדור לקחת.
+   מדלג על ימי ההפסקה — ולכן שונה מ"מתי הקופסה תתרוקן". */
+function cycleDaysRemaining(med) {
+  const pos = cyclePosition(med);
+  if (!pos) return null;
+  let left = med.currentStock;
+  let idx = pos.idx;
+  let days = 0;
+  while (days < 3650) {
+    if (idx < pos.on) {
+      if (left < med.dailyRate) break;
+      left -= med.dailyRate;
+    }
+    days++;
+    idx = (idx + 1) % pos.len;
+  }
+  return days;
+}
+
 function daysRemaining(med) {
-  if (!med.dailyRate || med.dailyRate <= 0) return Infinity;
-  return med.currentStock / med.dailyRate;
+  if (freqMode(med) === 'cycle') {
+    const cycleDays = cycleDaysRemaining(med);
+    if (cycleDays !== null) return cycleDays;
+  }
+  const avg = avgDailyRate(med);
+  if (avg <= 0) return Infinity;
+  return med.currentStock / avg;
+}
+
+/* תיאור אנושי לתדירות — אף פעם לא מספר עשרוני כמו "0.14 ליום" */
+function freqText(med) {
+  const mode = freqMode(med);
+  if (mode === 'weekly') {
+    const times = med.timesPerWeek || 1;
+    const pills = med.dailyRate === 1 ? '' : `${med.dailyRate} כדורים · `;
+    return pills + (times === 1 ? 'פעם בשבוע' : `${times} פעמים בשבוע`);
+  }
+  if (mode === 'cycle') {
+    return `מחזורי · ${med.cycleOnDays} יום נוטלים, ${med.cycleOffDays} יום הפסקה`;
+  }
+  return `${med.dailyRate} ליום`;
+}
+
+/* התגית בכרטיס: בנטילה או בהפסקה, ומתי המצב מתחלף */
+function cycleChipHTML(med) {
+  if (freqMode(med) !== 'cycle') return '';
+  const pos = cyclePosition(med);
+  if (!pos) return '';
+  const now = startOfToday();
+  if (pos.isTaking) {
+    const pauseAt = addDays(now, pos.on - pos.idx);
+    return `<span class="cycle-chip active">▶ בנטילה · הפסקה מ-${formatShortDate(pauseAt)}</span>`;
+  }
+  const backAt = addDays(now, pos.len - pos.idx);
+  return `<span class="cycle-chip pause">⏸ בהפסקה · חוזרים לנטילה ב-${formatShortDate(backAt)}</span>`;
 }
 
 function medStatus(med) {
@@ -117,7 +230,8 @@ function medCardHTML(med, extraHTML = '') {
           <span class="status-dot status-${status}"></span>
           <div>
             <p class="med-name" dir="auto">${escapeHtml(med.name)}</p>
-            <p class="med-dose">${escapeHtml(med.dose || '')}${med.dose ? ' · ' : ''}${med.dailyRate} ליום</p>
+            <p class="med-dose">${escapeHtml(med.dose || '')}${med.dose ? ' · ' : ''}${freqText(med)}</p>
+            ${cycleChipHTML(med)}
           </div>
         </div>
         <p class="med-days ${status}">${formatDays(days)}</p>
@@ -139,7 +253,7 @@ const orderMonthsByMedId = {};
 
 function calcOrderSuggestion(med, months) {
   const targetDays = months * 30;
-  const neededPills = Math.ceil(med.dailyRate * targetDays);
+  const neededPills = Math.ceil(avgDailyRate(med) * targetDays);
   const neededBoxes = med.pillsPerBox ? Math.ceil(neededPills / med.pillsPerBox) : null;
   return { neededPills, neededBoxes };
 }
@@ -347,6 +461,92 @@ function recalcStockFromBoxes() {
 form.pillsPerBox.addEventListener('input', recalcStockFromBoxes);
 form.currentBoxes.addEventListener('input', recalcStockFromBoxes);
 
+/* ---------- frequency picker ---------- */
+
+const freqBlocks = {
+  daily: document.getElementById('freqBlockDaily'),
+  weekly: document.getElementById('freqBlockWeekly'),
+  cycle: document.getElementById('freqBlockCycle'),
+};
+const rateSummaryMainEl = document.getElementById('rateSummaryMain');
+const rateSummarySubEl = document.getElementById('rateSummarySub');
+
+/* קוראים מהטופס למבנה שהלוגיקה יודעת לעבוד איתו, בלי לשמור עדיין */
+function readFreqFromForm() {
+  const mode = form.freqMode.value;
+  // תמיד מחזירים את כל השדות, כדי שמעבר בין מצבים בעריכה ינקה ערכים ישנים
+  const freq = {
+    freqMode: mode,
+    dailyRate: null,
+    timesPerWeek: null,
+    cycleOnDays: null,
+    cycleOffDays: null,
+    cycleStart: null,
+  };
+  if (mode === 'weekly') {
+    freq.dailyRate = parseFloat(form.weeklyRate.value);
+    freq.timesPerWeek = parseInt(form.timesPerWeek.value, 10);
+  } else if (mode === 'cycle') {
+    freq.dailyRate = parseFloat(form.cycleRate.value);
+    freq.cycleOnDays = parseInt(form.cycleOnDays.value, 10);
+    freq.cycleOffDays = parseInt(form.cycleOffDays.value, 10);
+    freq.cycleStart = form.cycleStart.value || null;
+  } else {
+    freq.dailyRate = parseFloat(form.dailyRate.value);
+  }
+  return freq;
+}
+
+function formatAvgRate(avg) {
+  const rounded = Math.round(avg * 100) / 100;
+  return rounded === 1 ? 'כדור אחד ליום' : `כ-${rounded} כדורים ליום`;
+}
+
+function updateFreqUI() {
+  const mode = form.freqMode.value;
+  Object.keys(freqBlocks).forEach(key => { freqBlocks[key].hidden = key !== mode; });
+
+  const freq = readFreqFromForm();
+  const avg = avgDailyRate(freq);
+
+  rateSummaryMainEl.textContent = avg > 0
+    ? `ממוצע: ${formatAvgRate(avg)}`
+    : 'ממוצע: נשלים את השדות למעלה';
+
+  let sub = '';
+  if (mode === 'cycle' && avg > 0) {
+    const pos = cyclePosition(freq);
+    if (!pos) {
+      sub = 'בלי תאריך התחלה אפשר לחשב רק ממוצע, לא תאריך מדויק';
+    } else {
+      const now = startOfToday();
+      sub = pos.isTaking
+        ? `כרגע בתקופת נטילה · ההפסקה מתחילה ב-${formatShortDate(addDays(now, pos.on - pos.idx))}`
+        : `כרגע בהפסקה · הנטילה חוזרת ב-${formatShortDate(addDays(now, pos.len - pos.idx))}`;
+    }
+    document.querySelectorAll('#cyclePresets .preset').forEach(btn => {
+      btn.classList.toggle('on',
+        +btn.dataset.on === freq.cycleOnDays && +btn.dataset.off === freq.cycleOffDays);
+    });
+  }
+  rateSummarySubEl.textContent = sub;
+}
+
+form.freqMode.addEventListener('change', updateFreqUI);
+['dailyRate', 'weeklyRate', 'timesPerWeek', 'cycleRate', 'cycleOnDays', 'cycleOffDays', 'cycleStart']
+  .forEach(field => {
+    form[field].addEventListener('input', updateFreqUI);
+    form[field].addEventListener('change', updateFreqUI);
+  });
+
+document.getElementById('cyclePresets').addEventListener('click', (e) => {
+  const btn = e.target.closest('.preset');
+  if (!btn) return;
+  form.cycleOnDays.value = btn.dataset.on;
+  form.cycleOffDays.value = btn.dataset.off;
+  updateFreqUI();
+});
+
 /* ---------- pack helper (box → sub-units, e.g. pens → dose units) ---------- */
 /* Only shown when the typed/selected name matches a MEDICATIONS_DB entry
    with type: 'insulin-pen' — see medications-db.js. */
@@ -450,7 +650,18 @@ function openModal(med = null) {
   form.name.value = med ? med.name : '';
   form.dose.value = med ? med.dose : '';
   form.pillsPerBox.value = med ? (med.pillsPerBox ?? '') : '';
-  form.dailyRate.value = med ? med.dailyRate : '';
+
+  const mode = med ? freqMode(med) : 'daily';
+  form.freqMode.value = mode;
+  form.dailyRate.value = mode === 'daily' && med ? med.dailyRate : '';
+  form.weeklyRate.value = mode === 'weekly' && med ? med.dailyRate : '';
+  form.timesPerWeek.value = mode === 'weekly' && med ? (med.timesPerWeek || 1) : '1';
+  form.cycleRate.value = mode === 'cycle' && med ? med.dailyRate : '';
+  form.cycleOnDays.value = mode === 'cycle' && med ? med.cycleOnDays : '';
+  form.cycleOffDays.value = mode === 'cycle' && med ? med.cycleOffDays : '';
+  form.cycleStart.value = mode === 'cycle' && med ? (med.cycleStart || '') : '';
+  updateFreqUI();
+
   form.currentBoxes.value = med ? (med.currentBoxes ?? '') : '';
   form.currentStock.value = med ? med.currentStock : '';
   form.alertDays.value = med ? med.alertDays : getDefaultAlertDays();
@@ -566,7 +777,7 @@ form.addEventListener('submit', (e) => {
     name: form.name.value.trim(),
     dose: normalizeDoseUnits(form.dose.value.trim()),
     pillsPerBox: parseFloat(form.pillsPerBox.value),
-    dailyRate: parseFloat(form.dailyRate.value),
+    ...readFreqFromForm(),
     currentBoxes: parseFloat(form.currentBoxes.value),
     currentStock: parseFloat(form.currentStock.value),
     alertDays: parseInt(form.alertDays.value, 10),
@@ -575,6 +786,7 @@ form.addEventListener('submit', (e) => {
     || isNaN(med.currentBoxes) || med.currentBoxes < 0 || isNaN(med.currentStock) || med.currentStock < 0) {
     return;
   }
+  if (med.freqMode === 'cycle' && (!med.cycleOnDays || !med.cycleOffDays)) return;
   localStorage.setItem(DEFAULT_ALERT_DAYS_KEY, String(med.alertDays));
   if (editingId) {
     updateMed(editingId, med);

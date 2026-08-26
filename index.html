@@ -165,15 +165,80 @@
         </div>
         <p class="field-hint">ימלא אוטומטית את "כמות כדורים בקופסה" למטה — אפשר לתקן את המספרים אם הריכוז שונה</p>
       </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="pillsPerBox">כמות כדורים בקופסה</label>
-          <input type="number" id="pillsPerBox" name="pillsPerBox" step="1" min="1" required>
-        </div>
+      <div class="field">
+        <label for="pillsPerBox">כמות כדורים בקופסה</label>
+        <input type="number" id="pillsPerBox" name="pillsPerBox" step="1" min="1" required>
+      </div>
+
+      <div class="field">
+        <label for="freqMode">תדירות נטילה</label>
+        <select id="freqMode" name="freqMode">
+          <option value="daily">כל יום</option>
+          <option value="weekly">כמה פעמים בשבוע</option>
+          <option value="cycle">מחזורי — תקופת נטילה והפסקה</option>
+        </select>
+      </div>
+
+      <!-- תדירות: כל יום -->
+      <div class="freq-block" id="freqBlockDaily">
         <div class="field">
           <label for="dailyRate">כדורים ביום</label>
-          <input type="number" id="dailyRate" name="dailyRate" step="0.5" min="0.5" required>
+          <input type="number" id="dailyRate" name="dailyRate" step="0.5" min="0.5">
         </div>
+      </div>
+
+      <!-- תדירות: כמה פעמים בשבוע -->
+      <div class="freq-block" id="freqBlockWeekly" hidden>
+        <div class="field-row">
+          <div class="field">
+            <label for="weeklyRate">כדורים בכל נטילה</label>
+            <input type="number" id="weeklyRate" name="weeklyRate" step="0.5" min="0.5">
+          </div>
+          <div class="field">
+            <label for="timesPerWeek">פעמים בשבוע</label>
+            <select id="timesPerWeek" name="timesPerWeek">
+              <option value="1">פעם אחת</option>
+              <option value="2">פעמיים</option>
+              <option value="3">3 פעמים</option>
+              <option value="4">4 פעמים</option>
+              <option value="5">5 פעמים</option>
+              <option value="6">6 פעמים</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- תדירות: מחזורי -->
+      <div class="freq-block" id="freqBlockCycle" hidden>
+        <div class="preset-row" id="cyclePresets">
+          <button type="button" class="preset" data-on="30" data-off="30">חודש כן / חודש לא</button>
+          <button type="button" class="preset" data-on="21" data-off="7">21 / 7</button>
+          <button type="button" class="preset" data-on="7" data-off="7">שבוע / שבוע</button>
+        </div>
+        <div class="field">
+          <label for="cycleRate">כדורים ביום (בימי הנטילה)</label>
+          <input type="number" id="cycleRate" name="cycleRate" step="0.5" min="0.5">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="cycleOnDays">ימים נוטלים</label>
+            <input type="number" id="cycleOnDays" name="cycleOnDays" step="1" min="1">
+          </div>
+          <div class="field">
+            <label for="cycleOffDays">ימי הפסקה</label>
+            <input type="number" id="cycleOffDays" name="cycleOffDays" step="1" min="1">
+          </div>
+        </div>
+        <div class="field">
+          <label for="cycleStart">מתי התחילה תקופת הנטילה הנוכחית</label>
+          <input type="date" id="cycleStart" name="cycleStart">
+          <p class="field-hint">בזכות התאריך הזה האפליקציה יודעת אם אתם כרגע בנטילה או בהפסקה, וסופרת ימים מדויקים</p>
+        </div>
+      </div>
+
+      <div class="rate-summary">
+        <p class="rate-summary-main" id="rateSummaryMain">—</p>
+        <p class="rate-summary-sub" id="rateSummarySub"></p>
       </div>
       <div class="field-row">
         <div class="field">
