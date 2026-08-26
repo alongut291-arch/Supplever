@@ -667,9 +667,12 @@ function matchMedications(query) {
   if (!q) return [];
   const qLower = q.toLowerCase();
   const db = typeof MEDICATIONS_DB !== 'undefined' ? MEDICATIONS_DB : [];
+  // aliases = כתיבים חלופיים בעברית לאותה תרופה (למשל "פולמוזים" מול "פולמוזיים").
+  // הם רק עוזרים למצוא אותה בחיפוש; מה שנכנס בפועל לשדה השם הוא תמיד השם הראשי.
+  const matchesHebrew = (m) => m.he.startsWith(q) || (m.aliases || []).some(a => a.startsWith(q));
   return db
-    .filter(m => m.he.startsWith(q) || m.en.toLowerCase().startsWith(qLower))
-    .map(m => ({ ...m, fill: m.he.startsWith(q) ? m.he : m.en }))
+    .filter(m => matchesHebrew(m) || m.en.toLowerCase().startsWith(qLower))
+    .map(m => ({ ...m, fill: matchesHebrew(m) ? m.he : m.en }))
     .sort((a, b) => a.fill.localeCompare(b.fill))
     .slice(0, 8);
 }

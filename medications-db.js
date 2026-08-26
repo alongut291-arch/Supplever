@@ -10,6 +10,10 @@
 // also sold in U-200/U-300 concentrations with different numbers, which the
 // user can edit in the pack helper.
 //
+// Entries with an aliases: [...] array can also be found by those alternative
+// Hebrew spellings (foreign brand names often have two accepted transliterations).
+// Aliases only widen the search — the name filled into the form is always he.
+//
 // Entries with a doses: [...] array turn the "מינון" field into a dropdown of
 // that medication's known strengths (e.g. ['0.5 מ״ג', '1 מ״ג', '5 מ״ג']) —
 // the free-text field still works normally for anything not listed. Only
@@ -209,7 +213,13 @@ const MEDICATIONS_DB = [
   { he: 'אורקמבי', en: 'Orkambi', doses: ['100/125 מ״ג', '200/125 מ״ג'] },
   { he: 'סימדקו', en: 'Symdeko' },
   { he: 'קריאון', en: 'Creon', doses: ['10,000 יח׳ ליפאז', '25,000 יח׳ ליפאז'] },
-  { he: 'פולמוזיים', en: 'Pulmozyme', doses: ['2.5 מ״ג (אמפולה יחידה)'] },
+  // פולמוזיים/פולמוזים — שני הכתיבים בשימוש בעברית, שניהם מוצאים את התרופה
+  { he: 'פולמוזיים', en: 'Pulmozyme', aliases: ['פולמוזים'], doses: ['2.5 מ״ג (אמפולה יחידה)'] },
+  // קייסטון: 75 מ"ג לבקבוקון חד-פעמי היא העוצמה היחידה שקיימת, מאומתת בעלון
+  // ה-FDA וב-EMA. ניתנת 3 פעמים ביום במחזורים של 28 יום נטילה / 28 יום הפסקה —
+  // מתאים בדיוק למצב "מחזורי" בתדירות הנטילה. השם העברי הוא תעתיק, לא הצלחתי
+  // לאמת אותו במקור ישראלי רשמי, ולכן נוספו שני כתיבים כ-aliases
+  { he: 'קייסטון', en: 'Cayston', aliases: ['קיסטון'], doses: ['75 מ״ג (בקבוקון יחיד)'] },
   // טובי קיימת בשתי צורות שונות: תמיסה לאינהלציה (אמפולות) וקפסולות אבקה
   // ("פודהלר") — שני מוצרים נפרדים עם אריזה שונה, מאומתים גם דרך עלון
   // ישראלי (pharmaline.co.il) וגם דרך איגוד סיסטיק פיברוזיס בישראל
