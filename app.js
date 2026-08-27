@@ -205,7 +205,11 @@ const listEl = document.getElementById('medList');
 const emptyStateEl = document.getElementById('emptyState');
 const orderListEl = document.getElementById('orderList');
 const ordersEmptyStateEl = document.getElementById('ordersEmptyState');
-const ordersHintEl = document.getElementById('ordersHint');
+const orderListAddedEl = document.getElementById('orderListAdded');
+const ordersPendingLabelEl = document.getElementById('ordersPendingLabel');
+const ordersPendingCountEl = document.getElementById('ordersPendingCount');
+const ordersAddedLabelEl = document.getElementById('ordersAddedLabel');
+const ordersAddedCountEl = document.getElementById('ordersAddedCount');
 const orderBadgeEl = document.getElementById('orderBadge');
 const cartListPendingEl = document.getElementById('cartListPending');
 const cartPendingLabelEl = document.getElementById('cartPendingLabel');
@@ -386,16 +390,30 @@ function renderOrders(sortedMeds) {
 
   if (needsOrder.length === 0) {
     orderListEl.innerHTML = '';
+    orderListAddedEl.innerHTML = '';
+    ordersPendingLabelEl.hidden = true;
+    ordersAddedLabelEl.hidden = true;
     ordersEmptyStateEl.style.display = 'block';
-    ordersHintEl.style.display = 'none';
     return;
   }
   ordersEmptyStateEl.style.display = 'none';
-  ordersHintEl.style.display = 'block';
-  const countText = needsOrder.length === 1 ? 'תרופה אחת דורשת הזמנה' : `${needsOrder.length} תרופות דורשות הזמנה`;
-  ordersHintEl.textContent = `${countText} — מוכן לקחת לבית המרקחת`;
-  orderListEl.innerHTML = needsOrder.map(med => medCardHTML(med, orderPlanningHTML(med))).join('');
+
+  // תרופה שכבר הוספת לרשימת ההזמנות ירדה למטה — מה שעוד דורש פעולה נשאר למעלה.
+  // המיון לפי דחיפות לא נעלם, הוא פשוט פועל בתוך כל קבוצה בנפרד (needsOrder כבר ממוין).
+  const pending = needsOrder.filter(med => !med.inOrder);
+  const added = needsOrder.filter(med => med.inOrder);
+
+  // כותרות רק כשבאמת יש שתי קבוצות להבחין ביניהן — אחרת זו רשימה אחת רציפה כמו קודם
+  ordersPendingLabelEl.hidden = added.length === 0 || pending.length === 0;
+  ordersPendingCountEl.textContent = pending.length;
+  orderListEl.innerHTML = pending.map(med => medCardHTML(med, orderPlanningHTML(med))).join('');
+
+  ordersAddedLabelEl.hidden = added.length === 0;
+  ordersAddedCountEl.textContent = added.length;
+  orderListAddedEl.innerHTML = added.map(med => medCardHTML(med, orderPlanningHTML(med))).join('');
+
   markSingleLineNames(orderListEl);
+  markSingleLineNames(orderListAddedEl);
 }
 
 function renderCart(sortedMeds) {
@@ -831,6 +849,7 @@ function handleListClick(e) {
 
 listEl.addEventListener('click', handleListClick);
 orderListEl.addEventListener('click', handleListClick);
+orderListAddedEl.addEventListener('click', handleListClick);
 cartListPendingEl.addEventListener('click', handleListClick);
 cartListSentEl.addEventListener('click', handleListClick);
 
@@ -842,6 +861,7 @@ function handleMonthsChange(e) {
 }
 
 orderListEl.addEventListener('change', handleMonthsChange);
+orderListAddedEl.addEventListener('change', handleMonthsChange);
 cartListPendingEl.addEventListener('change', handleMonthsChange);
 cartListSentEl.addEventListener('change', handleMonthsChange);
 

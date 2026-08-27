@@ -200,8 +200,10 @@ button{ font-family:var(--font-body); cursor:pointer; border:none; }
   min-width:18px; height:18px; border-radius:999px; display:flex; align-items:center; justify-content:center;
   padding:0 5px;
 }
-.section-label.sent{ color:var(--status-good); }
-.section-label.sent .count{ background:rgba(76,122,94,0.14); color:var(--status-good); }
+.section-label.sent,
+.section-label.added{ color:var(--status-good); }
+.section-label.sent .count,
+.section-label.added .count{ background:rgba(76,122,94,0.14); color:var(--status-good); }
 
 .cart-actions{ margin-top:6px; }
 .send-order-btn{
