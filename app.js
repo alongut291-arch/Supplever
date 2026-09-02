@@ -98,12 +98,54 @@ function cyclePosition(med, when = startOfToday()) {
   return { idx, on, off, len, isTaking: idx < on };
 }
 
+/* ---------- ירידת המלאי לאורך זמן ---------- */
+
+/* med.currentStock הוא המלאי שהיה בתאריך med.stockDate — לא המלאי של היום.
+   את המלאי הנוכחי מחשבים כל פעם מחדש (effectiveStock) במקום לעדכן את המספר
+   השמור, וזה מכוון: כך פתיחה חוזרת של האפליקציה, רענון, או שני טאבים פתוחים
+   לא מורידים מלאי פעמיים. המספר השמור משתנה רק כשהמשתמש מזין מלאי בעצמו או
+   מקבל הזמנה — ואז גם התאריך מתעדכן להיום. */
+
+function isoDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+/* כמה יחידות נצרכו מאז תאריך העוגן ועד היום */
+function consumedSince(med, fromDate) {
+  const elapsedDays = Math.floor((startOfToday() - fromDate) / MS_DAY);
+  if (elapsedDays <= 0) return 0;
+
+  // במצב מחזורי סופרים רק את ימי הנטילה שבאמת עברו, לא ממוצע —
+  // אחרת מטופל שהיה בהפסקה "מאבד" מלאי שכלל לא לקח
+  if (freqMode(med) === 'cycle') {
+    const pos = cyclePosition(med, fromDate);
+    if (pos) {
+      let takingDays = 0;
+      let idx = pos.idx;
+      for (let i = 0; i < elapsedDays; i++) {
+        if (idx < pos.on) takingDays++;
+        idx = (idx + 1) % pos.len;
+      }
+      return takingDays * med.dailyRate;
+    }
+  }
+  return avgDailyRate(med) * elapsedDays;
+}
+
+/* המלאי של היום — זה המספר שהאפליקציה מציגה ומחשבת לפיו */
+function effectiveStock(med) {
+  const anchor = parseDateInput(med.stockDate);
+  if (!anchor) return med.currentStock;
+  const left = med.currentStock - consumedSince(med, anchor);
+  return Math.max(0, Math.round(left * 100) / 100);
+}
+
 /* כמה ימים עד היום הראשון שבו לא תהיה יחידה לקחת.
    מדלג על ימי ההפסקה — ולכן שונה מ"מתי הקופסה תתרוקן". */
 function cycleDaysRemaining(med) {
   const pos = cyclePosition(med);
   if (!pos) return null;
-  let left = med.currentStock;
+  let left = effectiveStock(med);
   let idx = pos.idx;
   let days = 0;
   while (days < 3650) {
@@ -124,7 +166,7 @@ function daysRemaining(med) {
   }
   const avg = avgDailyRate(med);
   if (avg <= 0) return Infinity;
-  return med.currentStock / avg;
+  return effectiveStock(med) / avg;
 }
 
 /* תיאור אנושי לתדירות — אף פעם לא מספר עשרוני כמו "0.14 ליום" */
@@ -227,6 +269,7 @@ function medCardHTML(med, extraHTML = '') {
   const status = medStatus(med);
   const days = daysRemaining(med);
   const fill = stockFillPercent(med);
+  const stock = effectiveStock(med);
   return `
     <div class="med-card" data-id="${med.id}">
       <div class="med-card-top">
@@ -243,7 +286,7 @@ function medCardHTML(med, extraHTML = '') {
       <div class="stock-bar">
         <div class="stock-bar-fill ${status}" style="width:${fill}%"></div>
       </div>
-      <p class="med-hint">מלאי נוכחי: ${med.currentStock} יחידות${med.pillsPerBox ? ` (כ-${Math.round((med.currentStock / med.pillsPerBox) * 10) / 10} קופסאות)` : ''} · התראה מ-${formatAlertDays(med.alertDays)} לפני הסוף</p>
+      <p class="med-hint">מלאי נוכחי: ${stock} יחידות${med.pillsPerBox ? ` (כ-${Math.round((stock / med.pillsPerBox) * 10) / 10} קופסאות)` : ''} · התראה מ-${formatAlertDays(med.alertDays)} לפני הסוף</p>
       ${extraHTML}
       <button class="received-btn" data-action="receive" data-id="${med.id}">קיבלתי הזמנה — עדכן מלאי</button>
     </div>
@@ -302,7 +345,8 @@ function cartItemLine(med) {
 }
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  // תאריך מקומי ולא UTC — toISOString היה מחזיר את היום הקודם בשעות הלילה בישראל
+  return isoDate(startOfToday());
 }
 
 function sentDateText(dateStr) {
@@ -656,8 +700,13 @@ function openModal(med = null) {
   form.cycleStart.value = mode === 'cycle' && med ? (med.cycleStart || '') : '';
   updateFreqUI();
 
-  form.currentBoxes.value = med ? (med.currentBoxes ?? '') : '';
-  form.currentStock.value = med ? med.currentStock : '';
+  // בעריכה מציגים את המלאי של היום (אחרי הירידה), לא את המספר שהוזן בעבר —
+  // כך מה שרואים בטופס תואם למה שרואים בכרטיס, והשמירה מעגנת מחדש להיום
+  const stockNow = med ? effectiveStock(med) : null;
+  form.currentBoxes.value = med
+    ? (med.pillsPerBox ? Math.round((stockNow / med.pillsPerBox) * 100) / 100 : (med.currentBoxes ?? ''))
+    : '';
+  form.currentStock.value = med ? stockNow : '';
   form.alertDays.value = med ? med.alertDays : getDefaultAlertDays();
   packSubUnitsInput.value = '';
   packUnitsPerSubInput.value = '';
@@ -777,6 +826,7 @@ form.addEventListener('submit', (e) => {
     ...readFreqFromForm(),
     currentBoxes: parseFloat(form.currentBoxes.value),
     currentStock: parseFloat(form.currentStock.value),
+    stockDate: isoDate(startOfToday()),   // המלאי שהוזן נכון להיום
     alertDays: parseInt(form.alertDays.value, 10),
   };
   if (!med.name || !med.pillsPerBox || med.pillsPerBox <= 0 || !med.dailyRate || med.dailyRate <= 0
@@ -899,7 +949,7 @@ function openReceiveModal(id) {
   if (!med) return;
   receivingId = id;
   const perBoxHint = med.pillsPerBox ? ` · כל קופסה = ${med.pillsPerBox} יחידות` : '';
-  receiveMedNameEl.textContent = `${med.name} · מלאי נוכחי: ${med.currentStock} יחידות${perBoxHint}`;
+  receiveMedNameEl.textContent = `${med.name} · מלאי נוכחי: ${effectiveStock(med)} יחידות${perBoxHint}`;
   receiveForm.reset();
   receiveOverlay.classList.add('open');
   receiveForm.receiveBoxes.focus();
@@ -922,9 +972,13 @@ receiveForm.addEventListener('submit', (e) => {
   const med = loadMeds().find(m => m.id === receivingId);
   if (!med) return;
   const pillsPerBox = med.pillsPerBox || 1;
+  // מוסיפים למלאי של היום, לא למספר הישן שנשמר — אחרת הצריכה שכבר קרתה
+  // מאז אותה שמירה הייתה נספרת פעמיים
+  const stockNow = effectiveStock(med);
   updateMed(receivingId, {
-    currentStock: med.currentStock + boxesReceived * pillsPerBox,
-    currentBoxes: (med.currentBoxes || 0) + boxesReceived,
+    currentStock: stockNow + boxesReceived * pillsPerBox,
+    currentBoxes: Math.round((stockNow / pillsPerBox + boxesReceived) * 100) / 100,
+    stockDate: isoDate(startOfToday()),
     inOrder: false,
     orderSentDate: null,
   });
@@ -1126,6 +1180,17 @@ document.getElementById('dismissNotifyBtn').addEventListener('click', () => {
 
 /* ---------- init ---------- */
 
+/* תרופות שנשמרו לפני שהמלאי ידע לרדת לבד אין להן stockDate. מעגנים אותן
+   להיום ולא לתאריך שבו נוספו — כדי שלא "ייעלם" להן מלאי רטרואקטיבית על
+   תקופה שבה ממילא לא הייתה ירידה אוטומטית והמשתמש עדכן ידנית. */
+function anchorMissingStockDates() {
+  const today = isoDate(startOfToday());
+  loadMeds()
+    .filter(med => !med.stockDate)
+    .forEach(med => updateMed(med.id, { stockDate: today }));
+}
+
+anchorMissingStockDates();
 render();
 updateNotifyBanner();
 registerServiceWorker().then(() => checkAndNotify());
