@@ -530,6 +530,46 @@ function renderCart(sortedMeds) {
   updateSendEmailInfo();
 }
 
+/* ---------- כפתור "חזור" של הטלפון סוגר חלון פתוח ---------- */
+
+/* בלי זה, לחיצה על back בתוך "הוספת תרופה" מוציאה מהאפליקציה לגמרי — כי
+   מבחינת הדפדפן החלון הוא לא "עמוד" שאפשר לחזור ממנו. לכן בכל פתיחת חלון
+   דוחפים רשומה להיסטוריה, ובלחיצה על back הדפדפן מוציא אותה ואנחנו סוגרים
+   את החלון במקום לצאת מהאפליקציה.
+   openDialogs סופר כמה רשומות כאלה דחפנו, כדי שסגירה רגילה (ביטול/שמירה)
+   תוציא את הרשומה בעצמה ולא תשאיר היסטוריה מיותרת מאחור. */
+
+let dialogHistoryEntries = 0;
+
+function anyDialogOpen() {
+  return overlay.classList.contains('open')
+    || receiveOverlay.classList.contains('open')
+    || emailOverlay.classList.contains('open');
+}
+
+function registerDialogOpen() {
+  dialogHistoryEntries++;
+  history.pushState({ suppleverDialog: true }, '');
+}
+
+function registerDialogClose() {
+  if (dialogHistoryEntries === 0) return;
+  dialogHistoryEntries--;
+  history.back();
+}
+
+window.addEventListener('popstate', () => {
+  // מבחינים לפי מצב החלונות ולא לפי מונה: popstate שנוצר מ-history.back() שלנו
+  // מגיע כשהחלון כבר סגור, ואז אין מה לעשות. רק לחיצת back אמיתית של המשתמש
+  // מגיעה כשחלון עדיין פתוח.
+  if (!anyDialogOpen()) return;
+  dialogHistoryEntries = Math.max(0, dialogHistoryEntries - 1);
+  // סוגרים בלי לגעת בהיסטוריה — הדפדפן כבר הוציא את הרשומה
+  closeModal(true);
+  closeReceiveModal(true);
+  closeEmailModal(true);
+});
+
 /* ---------- modal ---------- */
 
 const overlay = document.getElementById('modalOverlay');
@@ -745,14 +785,20 @@ function openModal(med = null) {
   updatePackHelperVisibility(false);
   updateDoseOptions();
   overlay.classList.add('open');
-  form.name.focus();
+  registerDialogOpen();
+
+  // ממקדים בשדה השם רק בהוספת תרופה חדשה, שם זה באמת השדה הראשון שממלאים.
+  // בעריכה זה היה מקפיץ את מקלדת הטלפון על שדה שלרוב לא רוצים לשנות בכלל.
+  if (!med) form.name.focus();
 }
 
-function closeModal() {
+function closeModal(fromBackButton = false) {
+  if (!overlay.classList.contains('open')) return;
   overlay.classList.remove('open');
   editingId = null;
   form.reset();
   closeSuggestions();
+  if (!fromBackButton) registerDialogClose();
 }
 
 /* ---------- medication name autocomplete ---------- */
@@ -844,7 +890,7 @@ nameSuggestionsEl.addEventListener('mousedown', (e) => {
 });
 
 document.getElementById('addFab').addEventListener('click', () => openModal());
-document.getElementById('cancelBtn').addEventListener('click', closeModal);
+document.getElementById('cancelBtn').addEventListener('click', () => closeModal());
 overlay.addEventListener('click', (e) => {
   if (e.target === overlay) closeModal();
 });
@@ -984,15 +1030,18 @@ function openReceiveModal(id) {
   receiveMedNameEl.textContent = `${med.name} · מלאי נוכחי: ${effectiveStock(med)} יחידות${perBoxHint}`;
   receiveForm.reset();
   receiveOverlay.classList.add('open');
+  registerDialogOpen();
   receiveForm.receiveBoxes.focus();
 }
 
-function closeReceiveModal() {
+function closeReceiveModal(fromBackButton = false) {
+  if (!receiveOverlay.classList.contains('open')) return;
   receiveOverlay.classList.remove('open');
   receivingId = null;
+  if (!fromBackButton) registerDialogClose();
 }
 
-document.getElementById('receiveCancelBtn').addEventListener('click', closeReceiveModal);
+document.getElementById('receiveCancelBtn').addEventListener('click', () => closeReceiveModal());
 receiveOverlay.addEventListener('click', (e) => {
   if (e.target === receiveOverlay) closeReceiveModal();
 });
@@ -1102,15 +1151,18 @@ function openEmailModal(mode) {
     emailSubmitBtn.textContent = 'שמירה';
   }
   emailOverlay.classList.add('open');
+  registerDialogOpen();
   emailInput.focus();
 }
 
-function closeEmailModal() {
+function closeEmailModal(fromBackButton = false) {
+  if (!emailOverlay.classList.contains('open')) return;
   emailOverlay.classList.remove('open');
   emailForm.reset();
+  if (!fromBackButton) registerDialogClose();
 }
 
-document.getElementById('emailCancelBtn').addEventListener('click', closeEmailModal);
+document.getElementById('emailCancelBtn').addEventListener('click', () => closeEmailModal());
 emailOverlay.addEventListener('click', (e) => {
   if (e.target === emailOverlay) closeEmailModal();
 });
