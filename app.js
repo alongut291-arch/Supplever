@@ -264,6 +264,7 @@ const cartHintEl = document.getElementById('cartHint');
 const cartBadgeEl = document.getElementById('cartBadge');
 const cartActionsEl = document.getElementById('cartActions');
 const sendEmailInfoEl = document.getElementById('sendEmailInfo');
+const sendConfirmEl = document.getElementById('sendConfirm');
 
 function medCardHTML(med, extraHTML = '') {
   const status = medStatus(med);
@@ -474,6 +475,7 @@ function renderCart(sortedMeds) {
     cartEmptyStateEl.style.display = 'block';
     cartHintEl.style.display = 'none';
     cartActionsEl.style.display = 'none';
+    sendConfirmEl.hidden = true;
     return;
   }
   cartEmptyStateEl.style.display = 'none';
@@ -496,6 +498,7 @@ function renderCart(sortedMeds) {
   cartListSentEl.innerHTML = sent.map(cartRowHTML).join('');
 
   updateSendEmailInfo();
+  updateSendConfirm(inCart);
 }
 
 /* ---------- modal ---------- */
@@ -1015,6 +1018,24 @@ function updateSendEmailInfo() {
     : '';
 }
 
+/* אישור קבוע בעמוד אחרי שליחה — ולא הודעה קופצת: הלחיצה מעבירה את המשתמש
+   מיד לאפליקציית המייל, וטוסט בן 2 שניות היה נעלם לפני שהוא חוזר.
+   הניסוח אומר "מוכן לשליחה" ולא "נשלח" כי mailto: רק פותח טיוטה — האפליקציה
+   לא יכולה לדעת אם המשתמש באמת לחץ "שליחה" שם. */
+function updateSendConfirm(cartMeds) {
+  const email = getUserEmail();
+  const sentToday = cartMeds.filter(med => med.orderSentDate === todayStr());
+
+  if (!email || sentToday.length === 0) {
+    sendConfirmEl.hidden = true;
+    return;
+  }
+  sendConfirmEl.hidden = false;
+  sendConfirmEl.innerHTML =
+    `✓ מייל עם רשימת ההזמנות מוכן לשליחה אל <strong>${escapeHtml(email)}</strong>` +
+    `<span class="send-confirm-sub">יש לאשר את השליחה באפליקציית המייל שנפתחה</span>`;
+}
+
 function buildOrderMailto(toEmail, cartMeds) {
   const subject = 'רשימת הזמנות תרופות — Supplever';
   const lines = cartMeds.map(cartItemLine).join('\n');
@@ -1029,7 +1050,7 @@ function sendOrderListByEmail(cartMeds) {
   const today = todayStr();
   cartMeds.forEach(med => updateMed(med.id, { orderSentDate: today }));
   render();
-  showToast('נפתחה אפליקציית המייל');
+  showToast(`נפתח מייל אל ${email}`);
 }
 
 function handleSendOrderClick() {

@@ -21,6 +21,13 @@
 
 *{ box-sizing:border-box; margin:0; padding:0; }
 
+/* כלל בטיחות: כל אלמנט עם התכונה hidden באמת נעלם.
+   בלי זה, כל כלל CSS שמגדיר display (למשל display:flex על באדג' או על כותרת
+   קבוצה) גובר על ברירת המחדל של הדפדפן ל-[hidden] — כי כללים של הדף גוברים על
+   כללי הדפדפן — וה-hidden לא עושה כלום בשקט. זה בדיוק מה שגרם לבאדג' אדום עם
+   "0" להישאר על הטאבים ולכותרות הקבוצות להופיע כשהן ריקות. */
+[hidden]{ display:none !important; }
+
 body{
   background:var(--bg-canvas);
   color:var(--ink);
@@ -330,3 +337,14 @@ button{ font-family:var(--font-body); cursor:pointer; border:none; }
 }
 .cycle-chip.pause{ background:rgba(217,143,78,0.15); color:var(--clay-dark); }
 .cycle-chip.active{ background:rgba(31,74,67,0.09); color:var(--teal-deep); }
+
+/* ---------- אישור שליחת רשימת ההזמנות ---------- */
+.send-confirm{
+  display:flex; flex-direction:column; gap:4px;
+  margin-top:12px; padding:11px 14px; border-radius:10px;
+  background:rgba(76,122,94,0.10); border:1px solid rgba(76,122,94,0.28);
+  font-size:13px; font-weight:600; color:var(--status-good);
+}
+.send-confirm[hidden]{ display:none; }
+.send-confirm strong{ font-weight:700; overflow-wrap:anywhere; }
+.send-confirm-sub{ font-size:12px; font-weight:500; color:var(--ink-soft); }
