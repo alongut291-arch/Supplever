@@ -102,9 +102,9 @@
 
   <section id="ordersView" class="view" hidden>
     <div id="ordersEmptyState" class="empty-state">
-      <p class="big">✓</p>
-      <p><strong>הכל מעודכן</strong></p>
-      <p>אין כרגע תרופות שדורשות הזמנה</p>
+      <p class="big" id="ordersEmptyIcon">✓</p>
+      <p><strong id="ordersEmptyTitle">הכל מעודכן</strong></p>
+      <p id="ordersEmptyText">אין כרגע תרופות שדורשות הזמנה</p>
     </div>
 
     <p id="ordersPendingLabel" class="section-label" hidden>טרם נוספו לרשימת ההזמנות <span id="ordersPendingCount" class="count"></span></p>
@@ -128,7 +128,6 @@
 
     <div id="cartActions" class="cart-actions" style="display:none;">
       <button type="button" id="sendOrderBtn" class="send-order-btn">שליחת רשימת ההזמנות</button>
-      <p id="sendConfirm" class="send-confirm" hidden></p>
       <p id="sendEmailInfo" class="cart-send-info"></p>
     </div>
 

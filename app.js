@@ -247,6 +247,9 @@ const listEl = document.getElementById('medList');
 const emptyStateEl = document.getElementById('emptyState');
 const orderListEl = document.getElementById('orderList');
 const ordersEmptyStateEl = document.getElementById('ordersEmptyState');
+const ordersEmptyIconEl = document.getElementById('ordersEmptyIcon');
+const ordersEmptyTitleEl = document.getElementById('ordersEmptyTitle');
+const ordersEmptyTextEl = document.getElementById('ordersEmptyText');
 const orderListAddedEl = document.getElementById('orderListAdded');
 const ordersPendingLabelEl = document.getElementById('ordersPendingLabel');
 const ordersPendingCountEl = document.getElementById('ordersPendingCount');
@@ -264,9 +267,8 @@ const cartHintEl = document.getElementById('cartHint');
 const cartBadgeEl = document.getElementById('cartBadge');
 const cartActionsEl = document.getElementById('cartActions');
 const sendEmailInfoEl = document.getElementById('sendEmailInfo');
-const sendConfirmEl = document.getElementById('sendConfirm');
 
-function medCardHTML(med, extraHTML = '') {
+function medCardHTML(med, extraHTML = '', showReceiveBtn = true) {
   const status = medStatus(med);
   const days = daysRemaining(med);
   const fill = stockFillPercent(med);
@@ -289,7 +291,7 @@ function medCardHTML(med, extraHTML = '') {
       </div>
       <p class="med-hint">מלאי נוכחי: ${stock} יחידות${med.pillsPerBox ? ` (כ-${Math.round((stock / med.pillsPerBox) * 10) / 10} קופסאות)` : ''} · התראה מ-${formatAlertDays(med.alertDays)} לפני הסוף</p>
       ${extraHTML}
-      <button class="received-btn" data-action="receive" data-id="${med.id}">קיבלתי הזמנה — עדכן מלאי</button>
+      ${showReceiveBtn ? `<button class="received-btn" data-action="receive" data-id="${med.id}">קיבלתי הזמנה — עדכן מלאי</button>` : ''}
     </div>
   `;
 }
@@ -366,14 +368,23 @@ function cartRowHTML(med) {
     ? `<p class="cart-row-sent-date">✓ ${sentDateText(med.orderSentDate)}</p>`
     : '';
 
+  // עדכון המלאי קורה מכאן, מהתרופות שכבר הוזמנו — ולא מ"דורש הזמנה",
+  // שממנו הן ירדו ברגע שנשלחה ההזמנה
+  const receiveBtnHTML = isSent
+    ? `<button class="cart-receive-btn" data-action="receive" data-id="${med.id}">ההזמנה הגיעה — עדכון מלאי</button>`
+    : '';
+
   return `
     <div class="cart-row${isSent ? ' is-sent' : ''}" data-id="${med.id}">
-      <div class="cart-row-info">
-        <p class="cart-row-name">${escapeHtml(med.name)}${med.dose ? ` · ${escapeHtml(med.dose)}` : ''}</p>
-        <p class="cart-row-qty">${qtyText}</p>
-        ${sentLineHTML}
+      <div class="cart-row-main">
+        <div class="cart-row-info">
+          <p class="cart-row-name">${escapeHtml(med.name)}${med.dose ? ` · ${escapeHtml(med.dose)}` : ''}</p>
+          <p class="cart-row-qty">${qtyText}</p>
+          ${sentLineHTML}
+        </div>
+        <button class="cart-row-remove" data-action="toggle-order" data-id="${med.id}" aria-label="הסר מרשימת ההזמנה">✕</button>
       </div>
-      <button class="cart-row-remove" data-action="toggle-order" data-id="${med.id}" aria-label="הסר מרשימת ההזמנה">✕</button>
+      ${receiveBtnHTML}
     </div>
   `;
 }
@@ -428,7 +439,9 @@ function render() {
 }
 
 function renderOrders(sortedMeds) {
-  const needsOrder = sortedMeds.filter(med => medStatus(med) !== 'good');
+  // תרופה שכבר נשלחה עליה הזמנה יורדת מהטאב הזה לגמרי — היא כבר לא "דורשת
+  // הזמנה", היא ממתינה להגעה. מכאן והלאה מטפלים בה מתוך "רשימת ההזמנות".
+  const needsOrder = sortedMeds.filter(med => medStatus(med) !== 'good' && !med.orderSentDate);
 
   orderBadgeEl.textContent = needsOrder.length;
   orderBadgeEl.hidden = needsOrder.length === 0;
@@ -439,6 +452,21 @@ function renderOrders(sortedMeds) {
     ordersPendingLabelEl.hidden = true;
     ordersAddedLabelEl.hidden = true;
     ordersEmptyStateEl.style.display = 'block';
+
+    // אם הטאב ריק רק כי הכל כבר הוזמן, "הכל מעודכן" הוא לא נכון — התרופות
+    // עדיין לא הגיעו. שולחים את המשתמש למקום שבו הוא באמת צריך לפעול.
+    const awaiting = sortedMeds.filter(med => med.orderSentDate && med.inOrder);
+    if (awaiting.length > 0) {
+      ordersEmptyIconEl.textContent = '📦';
+      ordersEmptyTitleEl.textContent = 'ההזמנות בדרך';
+      ordersEmptyTextEl.textContent = awaiting.length === 1
+        ? 'תרופה אחת הוזמנה וממתינה ב"רשימת ההזמנות" — לעדכון המלאי כשתגיע'
+        : `${awaiting.length} תרופות הוזמנו וממתינות ב"רשימת ההזמנות" — לעדכון המלאי כשיגיעו`;
+    } else {
+      ordersEmptyIconEl.textContent = '✓';
+      ordersEmptyTitleEl.textContent = 'הכל מעודכן';
+      ordersEmptyTextEl.textContent = 'אין כרגע תרופות שדורשות הזמנה';
+    }
     return;
   }
   ordersEmptyStateEl.style.display = 'none';
@@ -451,11 +479,11 @@ function renderOrders(sortedMeds) {
   // כותרות רק כשבאמת יש שתי קבוצות להבחין ביניהן — אחרת זו רשימה אחת רציפה כמו קודם
   ordersPendingLabelEl.hidden = added.length === 0 || pending.length === 0;
   ordersPendingCountEl.textContent = pending.length;
-  orderListEl.innerHTML = pending.map(med => medCardHTML(med, orderPlanningHTML(med))).join('');
+  orderListEl.innerHTML = pending.map(med => medCardHTML(med, orderPlanningHTML(med), false)).join('');
 
   ordersAddedLabelEl.hidden = added.length === 0;
   ordersAddedCountEl.textContent = added.length;
-  orderListAddedEl.innerHTML = added.map(med => medCardHTML(med, orderPlanningHTML(med))).join('');
+  orderListAddedEl.innerHTML = added.map(med => medCardHTML(med, orderPlanningHTML(med), false)).join('');
 
   markSingleLineNames(orderListEl);
   markSingleLineNames(orderListAddedEl);
@@ -475,7 +503,6 @@ function renderCart(sortedMeds) {
     cartEmptyStateEl.style.display = 'block';
     cartHintEl.style.display = 'none';
     cartActionsEl.style.display = 'none';
-    sendConfirmEl.hidden = true;
     return;
   }
   cartEmptyStateEl.style.display = 'none';
@@ -498,7 +525,6 @@ function renderCart(sortedMeds) {
   cartListSentEl.innerHTML = sent.map(cartRowHTML).join('');
 
   updateSendEmailInfo();
-  updateSendConfirm(inCart);
 }
 
 /* ---------- modal ---------- */
@@ -1016,24 +1042,6 @@ function updateSendEmailInfo() {
   sendEmailInfoEl.innerHTML = email
     ? `הרשימה תישלח אל ${escapeHtml(email)} · <button type="button" id="changeEmailBtn">שינוי</button>`
     : '';
-}
-
-/* אישור קבוע בעמוד אחרי שליחה — ולא הודעה קופצת: הלחיצה מעבירה את המשתמש
-   מיד לאפליקציית המייל, וטוסט בן 2 שניות היה נעלם לפני שהוא חוזר.
-   הניסוח אומר "מוכן לשליחה" ולא "נשלח" כי mailto: רק פותח טיוטה — האפליקציה
-   לא יכולה לדעת אם המשתמש באמת לחץ "שליחה" שם. */
-function updateSendConfirm(cartMeds) {
-  const email = getUserEmail();
-  const sentToday = cartMeds.filter(med => med.orderSentDate === todayStr());
-
-  if (!email || sentToday.length === 0) {
-    sendConfirmEl.hidden = true;
-    return;
-  }
-  sendConfirmEl.hidden = false;
-  sendConfirmEl.innerHTML =
-    `✓ מייל עם רשימת ההזמנות מוכן לשליחה אל <strong>${escapeHtml(email)}</strong>` +
-    `<span class="send-confirm-sub">יש לאשר את השליחה באפליקציית המייל שנפתחה</span>`;
 }
 
 function buildOrderMailto(toEmail, cartMeds) {
