@@ -507,12 +507,15 @@ function renderCart(sortedMeds) {
   }
   cartEmptyStateEl.style.display = 'none';
   cartHintEl.style.display = 'block';
-  cartActionsEl.style.display = 'block';
   const countText = inCart.length === 1 ? 'תרופה אחת ברשימת ההזמנה' : `${inCart.length} תרופות ברשימת ההזמנה`;
   cartHintEl.textContent = `${countText} — מוכן לקחת לבית המרקחת`;
 
   const pending = inCart.filter(med => !med.orderSentDate);
   const sent = inCart.filter(med => med.orderSentDate);
+
+  // המייל כולל רק את מה שטרם נשלח, ולכן כשאין כזה אין מה לשלוח —
+  // עדיף להסתיר את הכפתור מלהשאיר אותו לוחץ ולא עושה כלום
+  cartActionsEl.style.display = pending.length > 0 ? 'block' : 'none';
 
   // כל עוד שום דבר לא נשלח, נשארים במראה הרגיל של רשימה אחת בלי כותרות —
   // הפיצול לשתי קבוצות מופיע רק אחרי שליחה ראשונה, כשיש בפועל מה להבחין ביניהם.
@@ -1061,8 +1064,13 @@ function sendOrderListByEmail(cartMeds) {
   showToast(`נפתח מייל אל ${email}`);
 }
 
+/* רק מה שעדיין לא נשלח — תרופה שכבר יצאה בהזמנה קודמת לא חוזרת למייל הבא */
+function medsPendingSend() {
+  return loadMeds().filter(med => med.inOrder && !med.orderSentDate);
+}
+
 function handleSendOrderClick() {
-  const cartMeds = loadMeds().filter(m => m.inOrder);
+  const cartMeds = medsPendingSend();
   if (cartMeds.length === 0) return;
   if (getUserEmail()) {
     sendOrderListByEmail(cartMeds);
@@ -1116,7 +1124,7 @@ emailForm.addEventListener('submit', (e) => {
   closeEmailModal();
   updateSendEmailInfo();
   if (mode === 'send') {
-    sendOrderListByEmail(loadMeds().filter(m => m.inOrder));
+    sendOrderListByEmail(medsPendingSend());
   } else {
     showToast('כתובת המייל עודכנה');
   }
@@ -1224,7 +1232,9 @@ render();
 updateNotifyBanner();
 registerServiceWorker().then(() => checkAndNotify());
 
-// אם יש תרופה שדורשת הזמנה, זה מה שהמשתמש צריך לראות ראשון בפתיחת האפליקציה
-if (loadMeds().some(med => medStatus(med) !== 'good')) {
+// נפתחים על "דורש הזמנה" רק אם באמת יש שם משהו — כלומר תרופה שדורשת הזמנה
+// שעדיין לא נשלחה עליה הזמנה. תרופה שכבר הוזמנה ירדה מהטאב הזה, ואין סיבה
+// לפתוח את האפליקציה על מסך ריק.
+if (loadMeds().some(med => medStatus(med) !== 'good' && !med.orderSentDate)) {
   switchTab('orders');
 }
