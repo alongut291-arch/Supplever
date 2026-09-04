@@ -235,7 +235,10 @@ function normalizeDoseUnits(dose) {
   return DOSE_UNIT_REPLACEMENTS.reduce((str, [pattern, replacement]) => str.replace(pattern, replacement), dose);
 }
 
-const ALERT_DAYS_LABELS = { 7: 'שבוע', 14: 'שבועיים', 21: 'שלושה שבועות', 30: 'חודש' };
+const ALERT_DAYS_LABELS = {
+  7: 'שבוע', 14: 'שבועיים', 21: 'שלושה שבועות',
+  30: 'חודש', 60: 'חודשיים', 90: 'שלושה חודשים',
+};
 
 function formatAlertDays(alertDays) {
   return ALERT_DAYS_LABELS[alertDays] || `${alertDays} ימים`;
