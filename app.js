@@ -343,11 +343,29 @@ function orderPlanningHTML(med) {
   `;
 }
 
-function cartItemLine(med) {
+/* med.name מחזיק שם אחד בלבד — עברית או אנגלית, לפי איך שהתרופה נבחרה
+   בהשלמה האוטומטית. שני השמות קיימים רק במסד, אז שולפים משם את הצמד.
+   תרופה שהוקלדה ידנית ולא קיימת במסד תופיע עם השם היחיד שיש לה. */
+function medNamePair(med) {
+  const db = typeof MEDICATIONS_DB !== 'undefined' ? MEDICATIONS_DB : [];
+  const entry = db.find(m =>
+    m.he === med.name || m.en === med.name || (m.aliases || []).includes(med.name));
+  if (!entry || entry.he === entry.en) return med.name;
+  return `${entry.he} / ${entry.en}`;
+}
+
+/* בלוק אחד לכל תרופה בגוף המייל. mailto: מעביר טקסט פשוט בלבד — אין HTML,
+   ולכן אין טבלה אמיתית. בלוק ממוספר נקרא נכון בכל אפליקציית מייל ובכל רוחב
+   מסך, בלי להישבר על ערבוב עברית-אנגלית כמו שעמודות מיושרות היו נשברות. */
+function cartItemBlock(med, index) {
   const qtyText = med.orderSnapshotBoxes
-    ? `${boxesLabel(med.orderSnapshotBoxes)} (כ-${med.orderSnapshotPills} יחידות)`
+    ? boxesLabel(med.orderSnapshotBoxes)
     : `כ-${med.orderSnapshotPills || 0} יחידות`;
-  return `• ${med.name}${med.dose ? ' · ' + med.dose : ''} — ${qtyText}`;
+
+  const lines = [`${index + 1}. ${medNamePair(med)}`];
+  if (med.dose) lines.push(`   מינון: ${med.dose}`);   // המינון הוא שדה אופציונלי
+  lines.push(`   כמות: ${qtyText}`);
+  return lines.join('\n');
 }
 
 function todayStr() {
@@ -1100,9 +1118,9 @@ function updateSendEmailInfo() {
 }
 
 function buildOrderMailto(toEmail, cartMeds) {
-  const subject = 'רשימת הזמנות תרופות — Supplever';
-  const lines = cartMeds.map(cartItemLine).join('\n');
-  const body = `רשימת ההזמנות שלי:\n\n${lines}\n\nנשלח מתוך Supplever`;
+  const subject = 'רשימת הזמנת תרופות - Supplever';
+  const blocks = cartMeds.map(cartItemBlock).join('\n\n');
+  const body = `שלום רב,\n\nרשימת ההזמנות הנוכחית שלי היא:\n\n${blocks}\n\nנשלח מתוך Supplever`;
   return `mailto:${toEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
