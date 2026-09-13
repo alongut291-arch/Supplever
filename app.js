@@ -399,7 +399,7 @@ function cartRowHTML(med) {
     <div class="cart-row${isSent ? ' is-sent' : ''}" data-id="${med.id}">
       <div class="cart-row-main">
         <div class="cart-row-info">
-          <p class="cart-row-name">${escapeHtml(med.name)}${med.dose ? ` · ${escapeHtml(med.dose)}` : ''}</p>
+          <p class="cart-row-name"><bdi>${escapeHtml(med.name)}</bdi>${med.dose ? ` · <bdi>${escapeHtml(med.dose)}</bdi>` : ''}</p>
           <p class="cart-row-qty">${qtyText}</p>
           ${sentLineHTML}
         </div>

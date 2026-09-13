@@ -344,3 +344,8 @@ button{ font-family:var(--font-body); cursor:pointer; border:none; }
 }
 .cycle-chip.pause{ background:rgba(217,143,78,0.15); color:var(--clay-dark); }
 .cycle-chip.active{ background:rgba(31,74,67,0.09); color:var(--teal-deep); }
+
+/* בידוד כיווניות: שם תרופה באנגלית לצד מינון בעברית גרם לכך שהנקודה המפרידה
+   "קפצה" אחרי המינון במקום לשבת בין השם למינון. <bdi> מבודד כל חלק, כך שסדר
+   הקריאה נקבע לפי כיוון העמוד (ימין לשמאל) ולא לפי תוכן המילים. */
+bdi{ unicode-bidi:isolate; }
