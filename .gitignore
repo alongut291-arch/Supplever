@@ -1,2 +1,11 @@
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+
+# מפתח החתימה של אפליקציית האנדרואיד וכל מה שנגזר ממנו.
+# הריפו הזה ציבורי — מפתח שנדחף לכאן פעם אחת נחשף לצמיתות,
+# וצריך להחליף אותו מול גוגל. שמור אותו מחוץ לתיקיית הפרויקט.
+*.keystore
+*.jks
+signing-key-info.txt
+*.aab
+*.apk
