@@ -242,6 +242,19 @@ button{ font-family:var(--font-body); cursor:pointer; border:none; }
 }
 .fab:hover{ background:var(--teal-deep-light); }
 
+/* קישור למדיניות הפרטיות — נדרש על ידי חנות האפליקציות, ולכן חייב להיות
+   נגיש מתוך האפליקציה ולא רק מדף החנות. מכוון להיות דיסקרטי: הוא לא חלק
+   מהשימוש היומיומי. ה-padding העליון מרחיק אותו מכפתור ההוספה הצף. */
+.app-footer{
+  max-width:640px; margin:0 auto; padding:28px 20px 4px;
+  text-align:center;
+}
+.app-footer a{
+  font-size:13px; color:var(--ink-soft); text-decoration:underline;
+  text-underline-offset:3px;
+}
+.app-footer a:hover{ color:var(--teal-deep); }
+
 /* modal */
 .modal-overlay{
   position:fixed; inset:0; background:rgba(24,39,32,0.45);
