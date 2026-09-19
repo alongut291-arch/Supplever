@@ -457,6 +457,43 @@ function render() {
 
   renderOrders(urgencySorted);
   renderCart(urgencySorted);
+  writeAlertPlan(meds);
+}
+
+/* ---------- תוכנית ההתראות לרקע ----------
+
+   ה-Service Worker לא יכול לקרוא localStorage, ואנחנו לא רוצים עותק שני של
+   חשבון המלאי בתוכו — שתי גרסאות של אותה מתמטיקה נוטות להיפרד זו מזו בשקט.
+   לכן הדף מחשב כאן מראש, לכל תרופה, את התאריך שבו היא תחצה לסף ההתראה,
+   ושומר רשימה זעירה ב-Cache Storage (שכן נגיש ל-SW). ה-SW רק משווה תאריכים. */
+
+const ALERT_PLAN_CACHE = 'supplever-alert-plan';
+const ALERT_PLAN_URL = './alert-plan.json';
+
+function alertDateFor(med) {
+  const days = daysRemaining(med);
+  if (!isFinite(days)) return null;              // קצב נטילה 0 — לעולם לא ייגמר
+  const daysUntilAlert = Math.max(0, Math.ceil(days - (med.alertDays || 0)));
+  return isoDate(new Date(startOfToday().getTime() + daysUntilAlert * MS_DAY));
+}
+
+async function writeAlertPlan(meds) {
+  if (!('caches' in window)) return;
+  try {
+    const plan = {
+      updated: isoDate(startOfToday()),
+      meds: meds
+        .filter(med => !med.orderSentDate)       // כבר הוזמנה — אין על מה להתריע
+        .map(med => ({ name: med.name, alertDate: alertDateFor(med) }))
+        .filter(entry => entry.alertDate),
+    };
+    const cache = await caches.open(ALERT_PLAN_CACHE);
+    await cache.put(ALERT_PLAN_URL, new Response(JSON.stringify(plan), {
+      headers: { 'Content-Type': 'application/json' },
+    }));
+  } catch (err) {
+    console.error('Failed to write alert plan', err);
+  }
 }
 
 function renderOrders(sortedMeds) {
@@ -1238,6 +1275,25 @@ async function registerServiceWorker() {
   }
 }
 
+/* מבקש מ-Chrome להעיר את ה-Service Worker מדי יום כדי לבדוק את המלאי גם
+   כשהאפליקציה סגורה. חשוב לדעת: Chrome מחליט בעצמו אם ובאיזו תדירות להעיר,
+   לפי כמה שהמשתמש משתמש באפליקציה — ולאפליקציה שכמעט לא נפתחת הוא עלול לא
+   להעיר כלל. לכן זו תוספת בלבד: ההתראה בפתיחת האפליקציה נשארת המנגנון
+   העיקרי, ואסור להבטיח למשתמש תזכורת שתגיע בלי שפתח את האפליקציה. */
+async function registerPeriodicStockCheck(reg) {
+  if (!reg || !('periodicSync' in reg)) return 'unsupported';
+  try {
+    const status = await navigator.permissions.query({ name: 'periodic-background-sync' });
+    if (status.state !== 'granted') return `permission:${status.state}`;
+    await reg.periodicSync.register('supplever-stock-check', {
+      minInterval: 24 * 60 * 60 * 1000,
+    });
+    return 'registered';
+  } catch (err) {
+    return `failed:${err.name}`;
+  }
+}
+
 async function showSystemNotification(title, body) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   try {
@@ -1312,7 +1368,15 @@ function anchorMissingStockDates() {
 anchorMissingStockDates();
 render();
 updateNotifyBanner();
-registerServiceWorker().then(() => checkAndNotify());
+registerServiceWorker().then((reg) => {
+  checkAndNotify();
+  /* שומרים את התוצאה בשקט (בלי שום תצוגה למשתמש) — אי אפשר לאלץ את Chrome
+     לירות periodicsync לצורך בדיקה, ובלי הרישום הזה אין דרך לדעת בדיעבד
+     אם ההרשמה במכשיר בכלל הצליחה. */
+  registerPeriodicStockCheck(reg).then((result) => {
+    try { localStorage.setItem('supplever_bgsync_status', result); } catch (err) { /* לא קריטי */ }
+  });
+});
 
 // נפתחים על "דורש הזמנה" רק אם באמת יש שם משהו — כלומר תרופה שדורשת הזמנה
 // שעדיין לא נשלחה עליה הזמנה. תרופה שכבר הוזמנה ירדה מהטאב הזה, ואין סיבה
