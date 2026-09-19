@@ -1050,9 +1050,18 @@ function openReceiveModal(id) {
   const perBoxHint = med.pillsPerBox ? ` · כל קופסה = ${med.pillsPerBox} יחידות` : '';
   receiveMedNameEl.textContent = `${med.name} · מלאי נוכחי: ${effectiveStock(med)} יחידות${perBoxHint}`;
   receiveForm.reset();
+
+  /* תרופה שנמצאת כרגע בהזמנה נפתחת עם הכמות שהוזמנה כברירת מחדל — ברוב המקרים
+     זה בדיוק מה שהתקבל, והמשתמש רק מאשר. התנאי med.inOrder חיוני: אחרי קבלת
+     הזמנה השדה orderSnapshotBoxes נשאר על התרופה, ובלי התנאי היינו ממלאים
+     בפעם הבאה מספר משריד של הזמנה ישנה. */
+  const prefillBoxes = med.inOrder && med.orderSnapshotBoxes ? med.orderSnapshotBoxes : null;
+  if (prefillBoxes) receiveForm.receiveBoxes.value = prefillBoxes;
+
   receiveOverlay.classList.add('open');
   registerDialogOpen();
-  receiveForm.receiveBoxes.focus();
+  /* כשיש ערך מוכן אין למה לפתוח מקלדת — היא רק מסתירה את כפתור האישור */
+  if (!prefillBoxes) receiveForm.receiveBoxes.focus();
 }
 
 function closeReceiveModal(fromBackButton = false) {
