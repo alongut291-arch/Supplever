@@ -602,7 +602,8 @@ let dialogHistoryEntries = 0;
 function anyDialogOpen() {
   return overlay.classList.contains('open')
     || receiveOverlay.classList.contains('open')
-    || emailOverlay.classList.contains('open');
+    || emailOverlay.classList.contains('open')
+    || confirmOverlay.classList.contains('open');
 }
 
 function registerDialogOpen() {
@@ -610,22 +611,71 @@ function registerDialogOpen() {
   history.pushState({ suppleverDialog: true }, '');
 }
 
+/* ה-popstate שנוצר מ-history.back() שלנו נראה זהה ללחיצת back של המשתמש.
+   כל עוד היה חלון אחד פתוח בכל רגע אפשר היה להבחין ביניהם לפי מצב החלונות,
+   אבל חלון אישור שנפתח מעל חלון עריכה שובר את זה: כשאנחנו סוגרים את האישור,
+   חלון העריכה עדיין פתוח — ובלי הדגל הזה היינו סוגרים גם אותו. */
+let closingDialogOurselves = false;
+
 function registerDialogClose() {
   if (dialogHistoryEntries === 0) return;
   dialogHistoryEntries--;
+  closingDialogOurselves = true;
   history.back();
 }
 
 window.addEventListener('popstate', () => {
-  // מבחינים לפי מצב החלונות ולא לפי מונה: popstate שנוצר מ-history.back() שלנו
-  // מגיע כשהחלון כבר סגור, ואז אין מה לעשות. רק לחיצת back אמיתית של המשתמש
-  // מגיעה כשחלון עדיין פתוח.
+  if (closingDialogOurselves) {
+    closingDialogOurselves = false;
+    return;
+  }
   if (!anyDialogOpen()) return;
   dialogHistoryEntries = Math.max(0, dialogHistoryEntries - 1);
-  // סוגרים בלי לגעת בהיסטוריה — הדפדפן כבר הוציא את הרשומה
+  // סוגרים בלי לגעת בהיסטוריה — הדפדפן כבר הוציא את הרשומה.
+  // רק את החלון העליון: back מעל חלון אישור מבטל את האישור ומחזיר לעריכה.
+  if (confirmOverlay.classList.contains('open')) {
+    closeConfirmModal(true);
+    return;
+  }
   closeModal(true);
   closeReceiveModal(true);
   closeEmailModal(true);
+});
+
+/* ---------- חלון אישור ----------
+
+   מחליף את confirm() של הדפדפן. הדפדפן מחייב להציג בהודעה כזו את שם הדומיין
+   ("alongut291-arch.github.io says") ואת הכפתורים באנגלית, ואי אפשר לעצב
+   אותה — מה שנראה למשתמש כמו הודעה זרה שנכנסה לאמצע האפליקציה. */
+
+const confirmOverlay = document.getElementById('confirmModalOverlay');
+const confirmTitleEl = document.getElementById('confirmTitle');
+const confirmTextEl = document.getElementById('confirmText');
+const confirmOkBtn = document.getElementById('confirmOkBtn');
+let confirmResolve = null;
+
+function askConfirm({ title, text, okLabel = 'אישור' }) {
+  confirmTitleEl.textContent = title;
+  confirmTextEl.textContent = text;
+  confirmOkBtn.textContent = okLabel;
+  confirmOverlay.classList.add('open');
+  registerDialogOpen();
+  return new Promise((resolve) => { confirmResolve = resolve; });
+}
+
+function closeConfirmModal(fromBackButton = false, answer = false) {
+  if (!confirmOverlay.classList.contains('open')) return;
+  confirmOverlay.classList.remove('open');
+  if (!fromBackButton) registerDialogClose();
+  const resolve = confirmResolve;
+  confirmResolve = null;
+  if (resolve) resolve(answer);
+}
+
+confirmOkBtn.addEventListener('click', () => closeConfirmModal(false, true));
+document.getElementById('confirmCancelBtn').addEventListener('click', () => closeConfirmModal());
+confirmOverlay.addEventListener('click', (e) => {
+  if (e.target === confirmOverlay) closeConfirmModal();
 });
 
 /* ---------- modal ---------- */
@@ -982,14 +1032,19 @@ form.addEventListener('submit', (e) => {
   render();
 });
 
-deleteBtn.addEventListener('click', () => {
+deleteBtn.addEventListener('click', async () => {
   if (!editingId) return;
-  if (confirm('למחוק את התרופה הזו?')) {
-    deleteMed(editingId);
-    closeModal();
-    render();
-    showToast('התרופה נמחקה');
-  }
+  const id = editingId;   // נשמר מראש: closeModal מאפס את editingId
+  const confirmed = await askConfirm({
+    title: 'מחיקת תרופה',
+    text: 'האם למחוק תרופה זו?',
+    okLabel: 'מחיקה',
+  });
+  if (!confirmed) return;
+  deleteMed(id);
+  closeModal();
+  render();
+  showToast('התרופה נמחקה');
 });
 
 function handleListClick(e) {
