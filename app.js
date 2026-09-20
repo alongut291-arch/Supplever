@@ -457,7 +457,8 @@ function render() {
 
   renderOrders(urgencySorted);
   renderCart(urgencySorted);
-  writeAlertPlan(meds);
+  writeAlertPlan(meds);          // לדפדפן: תוכנית ל-Service Worker
+  syncNativeNotifications(meds); // לאפליקציה: תזמון אמיתי במערכת ההפעלה
 }
 
 /* ---------- תוכנית ההתראות לרקע ----------
@@ -1326,7 +1327,9 @@ function notifyMode() {
 const notifyBanner = document.getElementById('notifyBanner');
 
 function updateNotifyBanner() {
-  if (!('Notification' in window)) {
+  /* באפליקציה הארוזה ההרשאה נשאלת פעם אחת בהפעלה הראשונה דרך המערכת,
+     ואפשר לשנות אותה בהגדרות — הבאנר הזה רק היה מטריד שם. */
+  if (isNativeApp || !('Notification' in window)) {
     notifyBanner.hidden = true;
     return;
   }
@@ -1337,7 +1340,88 @@ function updateNotifyBanner() {
   notifyBanner.hidden = Notification.permission !== 'default' || dismissed || alreadyRequested || turnedOff;
 }
 
+/* ---------- התראות: שני עולמות, קובץ אחד ----------
+
+   אותו app.js מוגש גם מ-GitHub Pages (PWA בדפדפן) וגם ארוז בתוך אפליקציית
+   האנדרואיד (Capacitor). ההבדל מהותי דווקא בהתראות:
+
+   בדפדפן   — Service Worker, ובדיקת רקע שהיא best-effort (Chrome מחליט).
+   באפליקציה — התראות מתוזמנות במערכת ההפעלה עצמה, ולכן הן באמת נורות
+                בזמן שנקבע גם כשהאפליקציה סגורה.
+
+   לכן כל נקודת התראה עוברת דרך זיהוי פלטפורמה, ולא מניחה אחד מהם. */
+
+const isNativeApp = !!(window.Capacitor
+  && typeof window.Capacitor.isNativePlatform === 'function'
+  && window.Capacitor.isNativePlatform());
+
+function localNotifications() {
+  return (window.Capacitor && window.Capacitor.Plugins)
+    ? window.Capacitor.Plugins.LocalNotifications
+    : null;
+}
+
+async function ensureNotificationPermission() {
+  const LN = localNotifications();
+  if (isNativeApp && LN) {
+    const current = await LN.checkPermissions();
+    if (current.display === 'granted') return 'granted';
+    const asked = await LN.requestPermissions();
+    return asked.display;
+  }
+  if (!('Notification' in window)) return 'unsupported';
+  if (Notification.permission !== 'default') return Notification.permission;
+  return await Notification.requestPermission();
+}
+
+async function notificationsAllowed() {
+  const LN = localNotifications();
+  if (isNativeApp && LN) {
+    try { return (await LN.checkPermissions()).display === 'granted'; }
+    catch (err) { return false; }
+  }
+  return ('Notification' in window) && Notification.permission === 'granted';
+}
+
+/* מתזמן מראש התראה לכל תרופה, לתאריך שבו היא תחצה את סף ההתראה.
+   מבטלים הכול ומתזמנים מחדש בכל שינוי — פשוט יותר מלעקוב אחרי מה השתנה,
+   ומונע התראות יתומות על תרופות שנמחקו או שהמלאי שלהן עודכן. */
+async function syncNativeNotifications(meds) {
+  const LN = localNotifications();
+  if (!isNativeApp || !LN) return;
+  try {
+    const pending = await LN.getPending();
+    if (pending && pending.notifications && pending.notifications.length) {
+      await LN.cancel({ notifications: pending.notifications.map(n => ({ id: n.id })) });
+    }
+    if (notifyMode() !== 'background') return;
+    if (!(await notificationsAllowed())) return;
+
+    const list = [];
+    meds.filter(med => !med.orderSentDate).forEach((med, i) => {
+      const iso = alertDateFor(med);
+      if (!iso) return;
+      const at = parseDateInput(iso);
+      if (!at) return;
+      at.setHours(9, 0, 0, 0);                    // בוקר, לא באמצע הלילה
+      if (at.getTime() <= Date.now()) return;     // כבר עבר — ההתראה בפתיחה מטפלת בזה
+      list.push({
+        id: 2000 + i,
+        title: `${med.name} — מומלץ להזמין`,
+        body: 'פתחו את Supplever כדי להוסיף לרשימת ההזמנות',
+        schedule: { at, allowWhileIdle: true },   // allowWhileIdle: גם במצב חיסכון בסוללה
+      });
+    });
+    if (list.length) await LN.schedule({ notifications: list });
+  } catch (err) {
+    console.error('Failed to schedule native notifications', err);
+  }
+}
+
 async function registerServiceWorker() {
+  /* באפליקציה הארוזה אין טעם ב-Service Worker: הקבצים כבר מקומיים, ואת
+     ההתראות מטפל התוסף. רישום כאן היה נכשל בשקט ומשאיר שגיאה בקונסולה. */
+  if (isNativeApp) return null;
   if (!('serviceWorker' in navigator)) return null;
   try {
     return await navigator.serviceWorker.register('sw.js');
@@ -1368,7 +1452,17 @@ async function registerPeriodicStockCheck(reg) {
 }
 
 async function showSystemNotification(title, body) {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!(await notificationsAllowed())) return;
+  const LN = localNotifications();
+  if (isNativeApp && LN) {
+    try {
+      // בלי schedule — נורה מיד
+      await LN.schedule({ notifications: [{ id: Date.now() % 100000, title, body }] });
+    } catch (err) {
+      console.error('Failed to show notification', err);
+    }
+    return;
+  }
   try {
     const reg = await navigator.serviceWorker.getRegistration();
     if (reg) {
@@ -1383,7 +1477,7 @@ async function showSystemNotification(title, body) {
 
 async function checkAndNotify() {
   if (notifyMode() === 'off') return;
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  if (!(await notificationsAllowed())) return;
 
   // ברגע שתרופה חוזרת למלאי תקין (הוזמנה/עודכנה), מאפסים את הדגל — כדי
   // שבפעם הבאה שהיא תגיע שוב למצב "דורש הזמנה" תישלח עליה התראה חדשה,
@@ -1414,11 +1508,12 @@ async function checkAndNotify() {
 
 document.getElementById('enableNotifyBtn').addEventListener('click', async () => {
   localStorage.setItem(NOTIFY_REQUESTED_KEY, 'true');
-  const permission = await Notification.requestPermission();
+  const permission = await ensureNotificationPermission();
   updateNotifyBanner();
   if (permission === 'granted') {
     showToast('התראות הופעלו');
     checkAndNotify();
+    syncNativeNotifications(loadMeds());
   }
 });
 
@@ -1434,6 +1529,15 @@ const settingsEmailValueEl = document.getElementById('settingsEmailValue');
 
 function openSettingsModal() {
   settingsEmailValueEl.textContent = getUserEmail() || 'עדיין לא הוגדרה כתובת';
+
+  /* אותו מסך, שתי אמיתות שונות. באפליקציה ההתראה מתוזמנת במערכת ההפעלה
+     ולכן אפשר להבטיח אותה; בדפדפן היא תלויה בהחלטה של Chrome ואסור להבטיח.
+     הטקסט חייב להשתנות, אחרת אחד משני הקהלים מקבל מידע לא נכון. */
+  if (isNativeApp) {
+    document.getElementById('notifyBackgroundTitle').textContent = 'גם כשהאפליקציה סגורה';
+    document.getElementById('notifyBackgroundText').textContent =
+      'התזכורת נקבעת מראש במערכת ההפעלה ותגיע בבוקר שבו התרופה מגיעה לסף, גם אם לא פתחתם את האפליקציה.';
+  }
   const mode = notifyMode();
   const chosen = settingsOverlay.querySelector(`input[name="notifyMode"][value="${mode}"]`);
   if (chosen) chosen.checked = true;
@@ -1469,30 +1573,125 @@ settingsOverlay.addEventListener('change', async (e) => {
   updateNotifyBanner();
 
   if (mode === 'off') {
+    syncNativeNotifications(loadMeds());   // מבטל תזמונים קיימים
     showToast('ההתראות כובו');
     return;
   }
 
   /* בלי הרשאת מערכת אין התראות בשום מצב, אז מבקשים אותה ברגע שהמשתמש
      בוחר מצב שמתריע — ולא משאירים אותו עם הגדרה שלא תעשה כלום. */
-  if ('Notification' in window && Notification.permission === 'default') {
-    localStorage.setItem(NOTIFY_REQUESTED_KEY, 'true');
-    await Notification.requestPermission();
-    updateNotifyBanner();
-  }
-  if ('Notification' in window && Notification.permission === 'denied') {
+  localStorage.setItem(NOTIFY_REQUESTED_KEY, 'true');
+  const permission = await ensureNotificationPermission();
+  updateNotifyBanner();
+  if (permission === 'denied') {
     showToast('ההתראות חסומות בהגדרות המכשיר');
     return;
   }
 
-  if (mode === 'background') {
+  if (mode === 'background' && !isNativeApp) {
     const reg = await navigator.serviceWorker.getRegistration();
     registerPeriodicStockCheck(reg).then((result) => {
       try { localStorage.setItem('supplever_bgsync_status', result); } catch (err) { /* לא קריטי */ }
     });
   }
+  syncNativeNotifications(loadMeds());
   showToast('ההגדרה נשמרה');
   checkAndNotify();
+});
+
+/* ---------- גיבוי ושחזור ----------
+
+   הנתונים חיים ב-localStorage, שמשויך למקור ולאפליקציה שמריצה אותו. המשמעות
+   שקל לפספס: מעבר מ-TWA (שרץ בתוך Chrome) לאפליקציה ארוזה (WebView משלה)
+   מעביר את המשתמש לאחסון אחר לגמרי — והתרופות שלו "נעלמות" בלי שום שגיאה.
+   זו הסיבה המיידית שהפיצ'ר הזה נבנה, אבל הוא נחוץ גם בלעדיה: החלפת טלפון
+   או ניקוי נתוני הדפדפן מוחקים הכול, ומדיניות הפרטיות אומרת זאת במפורש. */
+
+const BACKUP_FORMAT_VERSION = 1;
+
+function buildBackup() {
+  return {
+    app: 'Supplever',
+    version: BACKUP_FORMAT_VERSION,
+    exportedAt: new Date().toISOString(),
+    meds: loadMeds(),
+    settings: {
+      email: getUserEmail(),
+      defaultAlertDays: localStorage.getItem(DEFAULT_ALERT_DAYS_KEY),
+      notifyMode: localStorage.getItem(NOTIFY_MODE_KEY),
+    },
+  };
+}
+
+function backupFileName() {
+  const d = startOfToday();
+  return `supplever-backup-${isoDate(d)}.json`;
+}
+
+document.getElementById('exportBtn').addEventListener('click', async () => {
+  const json = JSON.stringify(buildBackup(), null, 2);
+  const name = backupFileName();
+  try {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast('הגיבוי נשמר');
+  } catch (err) {
+    console.error('Export failed', err);
+    showToast('הגיבוי נכשל');
+  }
+});
+
+document.getElementById('importBtn').addEventListener('click', () => {
+  document.getElementById('importFile').click();
+});
+
+document.getElementById('importFile').addEventListener('change', async (e) => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';                 // כדי שבחירת אותו קובץ שוב תפעיל את האירוע
+  if (!file) return;
+
+  let backup;
+  try {
+    backup = JSON.parse(await file.text());
+  } catch (err) {
+    showToast('הקובץ אינו קובץ גיבוי תקין');
+    return;
+  }
+  if (!backup || backup.app !== 'Supplever' || !Array.isArray(backup.meds)) {
+    showToast('הקובץ אינו קובץ גיבוי של Supplever');
+    return;
+  }
+
+  const current = loadMeds().length;
+  const inBackup = backup.meds.length === 1 ? 'תרופה אחת' : `${backup.meds.length} תרופות`;
+  const inApp = current === 1 ? 'התרופה שנמצאת' : `${current} התרופות שנמצאות`;
+  const confirmed = await askConfirm({
+    title: 'שחזור מגיבוי',
+    text: current
+      ? `הגיבוי מכיל ${inBackup}. השחזור יחליף את ${inApp} כעת באפליקציה, ואי אפשר לבטל אותו.`
+      : `לשחזר ${inBackup} מהגיבוי?`,
+    okLabel: 'שחזור',
+  });
+  if (!confirmed) return;
+
+  saveMeds(backup.meds);
+  const s = backup.settings || {};
+  if (s.email) saveUserEmail(s.email);
+  if (s.defaultAlertDays) localStorage.setItem(DEFAULT_ALERT_DAYS_KEY, s.defaultAlertDays);
+  if (s.notifyMode) localStorage.setItem(NOTIFY_MODE_KEY, s.notifyMode);
+
+  closeSettingsModal();
+  anchorMissingStockDates();
+  render();
+  updateSendEmailInfo();
+  showToast(backup.meds.length === 1 ? 'שוחזרה תרופה אחת' : `שוחזרו ${backup.meds.length} תרופות`);
 });
 
 /* ---------- init ---------- */
@@ -1510,6 +1709,15 @@ function anchorMissingStockDates() {
 anchorMissingStockDates();
 render();
 updateNotifyBanner();
+/* באפליקציה הארוזה מבקשים את ההרשאה בהפעלה הראשונה — אין שם באנר, וכל
+   מנגנון ההתראות תלוי בה. מי שכיבה התראות בהגדרות לא נשאל. */
+if (isNativeApp && notifyMode() !== 'off') {
+  ensureNotificationPermission().then(() => {
+    checkAndNotify();
+    syncNativeNotifications(loadMeds());
+  });
+}
+
 registerServiceWorker().then((reg) => {
   checkAndNotify();
   /* שומרים את התוצאה בשקט (בלי שום תצוגה למשתמש) — אי אפשר לאלץ את Chrome
