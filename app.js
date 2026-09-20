@@ -603,7 +603,8 @@ function anyDialogOpen() {
   return overlay.classList.contains('open')
     || receiveOverlay.classList.contains('open')
     || emailOverlay.classList.contains('open')
-    || confirmOverlay.classList.contains('open');
+    || confirmOverlay.classList.contains('open')
+    || settingsOverlay.classList.contains('open');
 }
 
 function registerDialogOpen() {
@@ -640,6 +641,7 @@ window.addEventListener('popstate', () => {
   closeModal(true);
   closeReceiveModal(true);
   closeEmailModal(true);
+  closeSettingsModal(true);
 });
 
 /* ---------- חלון אישור ----------
@@ -1262,7 +1264,10 @@ const emailSubmitBtn = document.getElementById('emailSubmitBtn');
 const emailModalTitleEl = document.getElementById('emailModalTitle');
 let emailModalMode = 'send';
 
-function openEmailModal(mode) {
+/* reuseHistoryEntry: כשעוברים ישירות מחלון אחר (הגדרות -> שינוי כתובת),
+   רשומת ההיסטוריה הקיימת פשוט עוברת לחלון הזה. אסור לסגור-ואז-לפתוח:
+   history.back() אסינכרוני, ו-pushState שרץ אחריו באותו tick מתחרה בו. */
+function openEmailModal(mode, reuseHistoryEntry = false) {
   emailModalMode = mode;
   emailInput.value = getUserEmail();
   if (mode === 'send') {
@@ -1273,7 +1278,7 @@ function openEmailModal(mode) {
     emailSubmitBtn.textContent = 'שמירה';
   }
   emailOverlay.classList.add('open');
-  registerDialogOpen();
+  if (!reuseHistoryEntry) registerDialogOpen();
   emailInput.focus();
 }
 
@@ -1308,6 +1313,16 @@ emailForm.addEventListener('submit', (e) => {
 
 const NOTIFY_DISMISSED_KEY = 'supplever_notify_dismissed';
 const NOTIFY_REQUESTED_KEY = 'supplever_notify_requested';
+
+/* שלושה מצבים, ברירת המחדל היא ההתנהגות שכבר קיימת אצל כל המשתמשים —
+   כך שהוספת ההגדרה לא משנה כלום למי שלא נוגע בה.
+   'background' הוא ניסיון בלבד; ראו את ההערה על registerPeriodicStockCheck. */
+const NOTIFY_MODE_KEY = 'supplever_notify_mode';
+
+function notifyMode() {
+  const saved = localStorage.getItem(NOTIFY_MODE_KEY);
+  return saved === 'off' || saved === 'onopen' || saved === 'background' ? saved : 'background';
+}
 const notifyBanner = document.getElementById('notifyBanner');
 
 function updateNotifyBanner() {
@@ -1317,7 +1332,9 @@ function updateNotifyBanner() {
   }
   const dismissed = localStorage.getItem(NOTIFY_DISMISSED_KEY) === 'true';
   const alreadyRequested = localStorage.getItem(NOTIFY_REQUESTED_KEY) === 'true';
-  notifyBanner.hidden = Notification.permission !== 'default' || dismissed || alreadyRequested;
+  // מי שכיבה התראות בהגדרות כבר ענה על השאלה — אין לחזור ולהציע לו
+  const turnedOff = notifyMode() === 'off';
+  notifyBanner.hidden = Notification.permission !== 'default' || dismissed || alreadyRequested || turnedOff;
 }
 
 async function registerServiceWorker() {
@@ -1336,6 +1353,7 @@ async function registerServiceWorker() {
    להעיר כלל. לכן זו תוספת בלבד: ההתראה בפתיחת האפליקציה נשארת המנגנון
    העיקרי, ואסור להבטיח למשתמש תזכורת שתגיע בלי שפתח את האפליקציה. */
 async function registerPeriodicStockCheck(reg) {
+  if (notifyMode() !== 'background') return 'mode:off';
   if (!reg || !('periodicSync' in reg)) return 'unsupported';
   try {
     const status = await navigator.permissions.query({ name: 'periodic-background-sync' });
@@ -1364,6 +1382,7 @@ async function showSystemNotification(title, body) {
 }
 
 async function checkAndNotify() {
+  if (notifyMode() === 'off') return;
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
 
   // ברגע שתרופה חוזרת למלאי תקין (הוזמנה/עודכנה), מאפסים את הדגל — כדי
@@ -1406,6 +1425,74 @@ document.getElementById('enableNotifyBtn').addEventListener('click', async () =>
 document.getElementById('dismissNotifyBtn').addEventListener('click', () => {
   localStorage.setItem(NOTIFY_DISMISSED_KEY, 'true');
   updateNotifyBanner();
+});
+
+/* ---------- הגדרות ---------- */
+
+const settingsOverlay = document.getElementById('settingsModalOverlay');
+const settingsEmailValueEl = document.getElementById('settingsEmailValue');
+
+function openSettingsModal() {
+  settingsEmailValueEl.textContent = getUserEmail() || 'עדיין לא הוגדרה כתובת';
+  const mode = notifyMode();
+  const chosen = settingsOverlay.querySelector(`input[name="notifyMode"][value="${mode}"]`);
+  if (chosen) chosen.checked = true;
+  settingsOverlay.classList.add('open');
+  registerDialogOpen();
+}
+
+function closeSettingsModal(fromBackButton = false) {
+  if (!settingsOverlay.classList.contains('open')) return;
+  settingsOverlay.classList.remove('open');
+  if (!fromBackButton) registerDialogClose();
+}
+
+document.getElementById('settingsBtn').addEventListener('click', () => openSettingsModal());
+document.getElementById('settingsCloseBtn').addEventListener('click', () => closeSettingsModal());
+settingsOverlay.addEventListener('click', (e) => {
+  if (e.target === settingsOverlay) closeSettingsModal();
+});
+
+/* שינוי כתובת: פותחים את חלון המייל הקיים במצב עריכה במקום לשכפל טופס שני.
+   מחליפים חלון בחלון בלי לגעת בהיסטוריה — הרשומה שנפתחה עבור ההגדרות עוברת
+   לחלון המייל, וסגירתו תוציא אותה. */
+document.getElementById('settingsEmailBtn').addEventListener('click', () => {
+  settingsOverlay.classList.remove('open');
+  openEmailModal('edit', true);
+});
+
+settingsOverlay.addEventListener('change', async (e) => {
+  const input = e.target.closest('input[name="notifyMode"]');
+  if (!input) return;
+  const mode = input.value;
+  localStorage.setItem(NOTIFY_MODE_KEY, mode);
+  updateNotifyBanner();
+
+  if (mode === 'off') {
+    showToast('ההתראות כובו');
+    return;
+  }
+
+  /* בלי הרשאת מערכת אין התראות בשום מצב, אז מבקשים אותה ברגע שהמשתמש
+     בוחר מצב שמתריע — ולא משאירים אותו עם הגדרה שלא תעשה כלום. */
+  if ('Notification' in window && Notification.permission === 'default') {
+    localStorage.setItem(NOTIFY_REQUESTED_KEY, 'true');
+    await Notification.requestPermission();
+    updateNotifyBanner();
+  }
+  if ('Notification' in window && Notification.permission === 'denied') {
+    showToast('ההתראות חסומות בהגדרות המכשיר');
+    return;
+  }
+
+  if (mode === 'background') {
+    const reg = await navigator.serviceWorker.getRegistration();
+    registerPeriodicStockCheck(reg).then((result) => {
+      try { localStorage.setItem('supplever_bgsync_status', result); } catch (err) { /* לא קריטי */ }
+    });
+  }
+  showToast('ההגדרה נשמרה');
+  checkAndNotify();
 });
 
 /* ---------- init ---------- */
