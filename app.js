@@ -1544,7 +1544,15 @@ async function syncNativeNotifications(meds) {
         id: 2000 + i,
         title: `${med.name} — מומלץ להזמין`,
         body: 'פתחו את Supplever כדי להוסיף לרשימת ההזמנות',
-        schedule: { at, allowWhileIdle: true },   // allowWhileIdle: גם במצב חיסכון בסוללה
+        /* isExactNotification: false — ברירת המחדל של הרכיב היא התראה מדויקת
+           לשנייה, וזו הרשאה שאנדרואיד 14 חוסם כברירת מחדל. כשהיא חסומה הרכיב
+           פותח למשתמש את מסך ההגדרות של אנדרואיד בכל קריאה ל-schedule — כלומר
+           בכל פתיחה של האפליקציה ובכל שינוי מלאי, כי הסנכרון רץ בסוף כל render.
+           להתראה של "המלאי עומד להיגמר" סטייה של שעה לא משנה דבר, ולכן מוותרים
+           על הדיוק ומוותרים איתו על ההרשאה כולה.
+           allowWhileIdle כן נשאר: הוא מה שמעיר את הטלפון גם במצב חיסכון בסוללה. */
+        isExactNotification: false,
+        schedule: { at, allowWhileIdle: true },
       });
     });
     if (list.length) await LN.schedule({ notifications: list });
