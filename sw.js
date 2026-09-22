@@ -1,7 +1,7 @@
 // Service worker for Supplever.
 // Handles: offline app-shell caching, and showing system notifications.
 // Bump CACHE_NAME whenever app files change, so users get the fresh version.
-const CACHE_NAME = 'supplever-v59';
+const CACHE_NAME = 'supplever-v60';
 
 /* תוכנית ההתראות שהדף כותב (ראו writeAlertPlan ב-app.js). מכוון שהיא לא
    נושאת מספר גרסה — היא נתוני משתמש ולא קובץ אפליקציה, ואסור שתימחק

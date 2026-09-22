@@ -332,11 +332,14 @@ function orderPlanningHTML(med) {
 
   return `
     <div class="order-planning">
-      <label class="order-planning-label">
+      <!-- span ולא label, בכוונה. <label> שעוטף פקד משכפל כל לחיצה אל
+           הפקד שבתוכו, והכפילות הזו פתחה את בורר האפשרויות פעמיים. זו
+           גם לא תווית אמיתית — רק טקסט שעוטף את הבורר משני צדדיו. -->
+      <span class="order-planning-label">
         להזמין מלאי ל-
         <select class="order-months-select" data-id="${med.id}">${optionsHTML}</select>
         קדימה
-      </label>
+      </span>
       <p class="order-planning-result">${resultText}</p>
       <button class="${toggleClass}" data-action="toggle-order" data-id="${med.id}">${toggleLabel}</button>
     </div>
@@ -457,6 +460,7 @@ function render() {
 
   renderOrders(urgencySorted);
   renderCart(urgencySorted);
+  enhanceSelects();              // בורר החודשים נוצר מחדש בכל ציור
   writeAlertPlan(meds);          // לדפדפן: תוכנית ל-Service Worker
   syncNativeNotifications(meds); // לאפליקציה: תזמון אמיתי במערכת ההפעלה
 }
@@ -601,7 +605,8 @@ function renderCart(sortedMeds) {
 let dialogHistoryEntries = 0;
 
 function anyDialogOpen() {
-  return overlay.classList.contains('open')
+  return choiceOverlay.classList.contains('open')
+    || overlay.classList.contains('open')
     || receiveOverlay.classList.contains('open')
     || emailOverlay.classList.contains('open')
     || confirmOverlay.classList.contains('open')
@@ -635,6 +640,10 @@ window.addEventListener('popstate', () => {
   dialogHistoryEntries = Math.max(0, dialogHistoryEntries - 1);
   // סוגרים בלי לגעת בהיסטוריה — הדפדפן כבר הוציא את הרשומה.
   // רק את החלון העליון: back מעל חלון אישור מבטל את האישור ומחזיר לעריכה.
+  if (choiceOverlay.classList.contains('open')) {
+    closeChoiceDialog(true);
+    return;
+  }
   if (confirmOverlay.classList.contains('open')) {
     closeConfirmModal(true);
     return;
@@ -644,6 +653,105 @@ window.addEventListener('popstate', () => {
   closeEmailModal(true);
   closeSettingsModal(true);
 });
+
+/* ---------- בורר האפשרויות שלנו ----------
+
+   את החלון שנפתח מ-<select> מצייר אנדרואיד, לא הדף. המשמעות היא שהוא לובש
+   את הגופן ואת הצבעים של המערכת, ואין דרך להעביר לו את Heebo או את צבעי
+   המותג — גופן ווב לא קיים מחוץ ל-WebView. בדפדפן זה לא הפריע כי כרום צייר
+   אותו בעצמו, ואחרי המעבר ל-Capacitor זה נעשה בולט.
+
+   לכן הבורר מצויר כאן. ה-<select> האמיתי נשאר בדף בדיוק כפי שהיה — הוא
+   עדיין מחזיק את הערך, עדיין חלק מהטופס, ועדיין יורה change. כל הקוד הקיים
+   שקורא .value או מאזין ל-change ממשיך לעבוד בלי שינוי; רק מי שמצייר את
+   הרשימה התחלף. */
+
+const choiceOverlay = document.getElementById('choiceOverlay');
+const choiceSheet = document.getElementById('choiceSheet');
+let choiceTarget = null;
+
+function openChoiceDialog(select) {
+  if (!select || select.disabled || select.options.length === 0) return;
+  // לחיצה כפולה, או אירוע משוכפל, לא יפתחו שתי רשומות היסטוריה
+  if (choiceOverlay.classList.contains('open')) return;
+  choiceTarget = select;
+  choiceSheet.innerHTML = '';
+
+  Array.from(select.options).forEach((opt) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'choice-item' + (opt.value === select.value ? ' selected' : '');
+    item.setAttribute('role', 'option');
+    item.setAttribute('aria-selected', String(opt.value === select.value));
+
+    const radio = document.createElement('span');
+    radio.className = 'choice-radio';
+    const label = document.createElement('span');
+    label.className = 'choice-label';
+    label.textContent = opt.textContent;
+
+    item.append(radio, label);
+    item.addEventListener('click', () => pickChoice(opt.value));
+    choiceSheet.appendChild(item);
+  });
+
+  choiceOverlay.classList.add('open');
+  registerDialogOpen();
+
+  const current = choiceSheet.querySelector('.choice-item.selected');
+  if (current) current.scrollIntoView({ block: 'nearest' });
+}
+
+function pickChoice(value) {
+  const select = choiceTarget;   // closeChoiceDialog מאפס אותו
+  closeChoiceDialog();
+  if (!select || select.value === value) return;
+  select.value = value;
+  select.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function closeChoiceDialog(fromBackButton = false) {
+  if (!choiceOverlay.classList.contains('open')) return;
+  choiceOverlay.classList.remove('open');
+  choiceTarget = null;
+  if (!fromBackButton) registerDialogClose();
+}
+
+choiceOverlay.addEventListener('click', (e) => {
+  if (e.target === choiceOverlay) closeChoiceDialog();
+});
+
+/* עוטפים כל <select> שעוד לא עטוף. העטיפה היא שמקבלת את הלחיצה — ה-select
+   עצמו נעשה שקוף ללחיצות (ראו ה-CSS) ויוצא ממסלול ה-Tab, אחרת Enter עליו
+   היה פותח שוב את החלון של המערכת. נקרא גם אחרי render, כי בורר החודשים
+   ב"דורש הזמנה" נוצר מחדש בכל ציור. */
+function enhanceSelects(root) {
+  (root || document).querySelectorAll('select:not([data-choice])').forEach((sel) => {
+    sel.dataset.choice = '1';
+
+    const wrap = document.createElement('span');
+    wrap.className = 'choice-wrap';
+    wrap.tabIndex = 0;
+    wrap.setAttribute('role', 'button');
+
+    const field = sel.closest('.field');
+    const label = (sel.id && document.querySelector('label[for="' + sel.id + '"]'))
+      || (field && field.querySelector('label'));
+    if (label) wrap.setAttribute('aria-label', label.textContent.trim());
+
+    sel.parentNode.insertBefore(wrap, sel);
+    wrap.appendChild(sel);
+    sel.tabIndex = -1;
+
+    wrap.addEventListener('click', () => openChoiceDialog(sel));
+    wrap.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openChoiceDialog(sel);
+      }
+    });
+  });
+}
 
 /* ---------- כפתור "אחורה" של הטלפון באפליקציה הארוזה ----------
 
@@ -1758,6 +1866,7 @@ registerServiceWorker().then((reg) => {
 // נפתחים על "דורש הזמנה" רק אם באמת יש שם משהו — כלומר תרופה שדורשת הזמנה
 // שעדיין לא נשלחה עליה הזמנה. תרופה שכבר הוזמנה ירדה מהטאב הזה, ואין סיבה
 // לפתוח את האפליקציה על מסך ריק.
+enhanceSelects();
 setupNativeBackButton();
 
 if (loadMeds().some(med => medStatus(med) !== 'good' && !med.orderSentDate)) {

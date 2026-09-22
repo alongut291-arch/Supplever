@@ -363,6 +363,14 @@
   </div>
 </div>
 
+<!-- בורר האפשרויות של כל <select> באפליקציה. ראו openChoiceDialog ב-app.js:
+     את החלון שנפתח מ-<select> מצייר אנדרואיד עצמו, עם הגופן והצבעים של
+     המערכת — ואין דרך לתת לו את Heebo או את צבעי המותג. לכן אנחנו מציירים
+     אותו בעצמנו, וה-<select> האמיתי נשאר במקומו רק כמחזיק הערך. -->
+<div id="choiceOverlay" class="choice-overlay">
+  <div class="choice-sheet" id="choiceSheet" role="listbox"></div>
+</div>
+
 <div id="emailModalOverlay" class="modal-overlay">
   <div class="modal">
     <h2 id="emailModalTitle">לאן לשלוח את הרשימה?</h2>
