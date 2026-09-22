@@ -645,6 +645,33 @@ window.addEventListener('popstate', () => {
   closeSettingsModal(true);
 });
 
+/* ---------- כפתור "אחורה" של הטלפון באפליקציה הארוזה ----------
+
+   בדפדפן הכל שלמעלה עובד לבד: הדפדפן מקבל את לחיצת ה-back, מוציא רשומה
+   מההיסטוריה, ומפעיל popstate. באפליקציה הארוזה אין דפדפן שיעשה את זה —
+   Capacitor לא נוגע בכפתור הזה בכלל, וברירת המחדל של אנדרואיד היא לסגור
+   את האפליקציה מיד, גם כשחלון פתוח.
+
+   הרישום ל-backButton עושה שני דברים: הוא מבטל את ברירת המחדל הזו, והוא
+   נותן לנו לתרגם את הלחיצה לאותו history.back() שהדפדפן היה עושה בעצמו.
+   כך אותה לוגיקה בדיוק רצה בשני העולמות, ואין כאן עותק שני של הכללים. */
+function setupNativeBackButton() {
+  if (!isNativeApp) return;
+  const App = (window.Capacitor && window.Capacitor.Plugins)
+    ? window.Capacitor.Plugins.App
+    : null;
+  if (!App) return;
+
+  App.addListener("backButton", () => {
+    if (anyDialogOpen()) {
+      // ה-popstate שלמעלה סוגר את החלון העליון בלבד
+      history.back();
+      return;
+    }
+    App.exitApp();
+  });
+}
+
 /* ---------- חלון אישור ----------
 
    מחליף את confirm() של הדפדפן. הדפדפן מחייב להציג בהודעה כזו את שם הדומיין
@@ -1731,6 +1758,8 @@ registerServiceWorker().then((reg) => {
 // נפתחים על "דורש הזמנה" רק אם באמת יש שם משהו — כלומר תרופה שדורשת הזמנה
 // שעדיין לא נשלחה עליה הזמנה. תרופה שכבר הוזמנה ירדה מהטאב הזה, ואין סיבה
 // לפתוח את האפליקציה על מסך ריק.
+setupNativeBackButton();
+
 if (loadMeds().some(med => medStatus(med) !== 'good' && !med.orderSentDate)) {
   switchTab('orders');
 }
