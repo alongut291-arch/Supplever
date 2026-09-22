@@ -1674,12 +1674,10 @@ function openSettingsModal() {
   settingsEmailValueEl.textContent = getUserEmail() || 'עדיין לא הוגדרה כתובת';
 
   /* אותו מסך, שתי אמיתות שונות. באפליקציה ההתראה מתוזמנת במערכת ההפעלה
-     ולכן אפשר להבטיח אותה; בדפדפן היא תלויה בהחלטה של Chrome ואסור להבטיח.
-     הטקסט חייב להשתנות, אחרת אחד משני הקהלים מקבל מידע לא נכון. */
+     ולכן היא באמת מגיעה גם כשהאפליקציה סגורה; בדפדפן היא תלויה בהחלטה של
+     Chrome, ולכן שם הניסוח נשאר מסויג ("כשאפשר") ואינו מבטיח דבר. */
   if (isNativeApp) {
     document.getElementById('notifyBackgroundTitle').textContent = 'גם כשהאפליקציה סגורה';
-    document.getElementById('notifyBackgroundText').textContent =
-      'התזכורת נקבעת מראש במערכת ההפעלה ותגיע בבוקר שבו התרופה מגיעה לסף, גם אם לא פתחתם את האפליקציה.';
   }
   const mode = notifyMode();
   const chosen = settingsOverlay.querySelector(`input[name="notifyMode"][value="${mode}"]`);

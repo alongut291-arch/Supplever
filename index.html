@@ -312,38 +312,24 @@
       <p class="settings-label">התראות</p>
       <label class="settings-choice">
         <input type="radio" name="notifyMode" value="background">
-        <span>
-          <strong id="notifyBackgroundTitle">גם ברקע, כשאפשר</strong>
-          <span id="notifyBackgroundText">נסה להתריע גם בלי שתפתחו את האפליקציה. אנדרואיד מחליט מתי, ולא בכל
-          המכשירים זה יעבוד — אל תסתמכו על זה כתזכורת יחידה.</span>
-        </span>
+        <strong id="notifyBackgroundTitle">גם ברקע, כשאפשר</strong>
       </label>
       <label class="settings-choice">
         <input type="radio" name="notifyMode" value="onopen">
-        <span>
-          <strong>בפתיחת האפליקציה</strong>
-          מתריע על תרופות שדורשות הזמנה כשאתם פותחים את Supplever.
-        </span>
+        <strong>בפתיחת האפליקציה</strong>
       </label>
       <label class="settings-choice">
         <input type="radio" name="notifyMode" value="off">
-        <span>
-          <strong>כבויות</strong>
-          לא יוצגו התראות כלל.
-        </span>
+        <strong>כבויות</strong>
       </label>
     </div>
 
-    <div class="settings-group">
+    <div class="settings-group settings-group-last">
       <p class="settings-label">גיבוי ושחזור</p>
       <p class="settings-value">הנתונים נשמרים על המכשיר הזה בלבד. גיבוי מאפשר להעביר אותם למכשיר אחר, או לשחזר אחרי החלפת טלפון.</p>
       <button type="button" id="exportBtn" class="btn-secondary settings-action">גיבוי הנתונים לקובץ</button>
       <button type="button" id="importBtn" class="btn-secondary settings-action" style="margin-top:8px;">שחזור מקובץ גיבוי</button>
       <input type="file" id="importFile" accept="application/json,.json" hidden>
-    </div>
-
-    <div class="settings-group settings-group-last">
-      <a class="settings-link" href="./privacy.html">מדיניות הפרטיות</a>
     </div>
 
     <div class="modal-actions">
