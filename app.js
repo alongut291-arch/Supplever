@@ -1599,8 +1599,12 @@ async function showSystemNotification(title, body) {
   const LN = localNotifications();
   if (isNativeApp && LN) {
     try {
-      // בלי schedule — נורה מיד
-      await LN.schedule({ notifications: [{ id: Date.now() % 100000, title, body }] });
+      // בלי schedule — נורה מיד. isExactNotification מאותה סיבה בדיוק כמו
+      // ב-syncNativeNotifications: בלעדיו הרכיב פותח את מסך ההגדרות של
+      // אנדרואיד 14 גם כאן, למרות שאין פה תזמון כלל.
+      await LN.schedule({
+        notifications: [{ id: Date.now() % 100000, title, body, isExactNotification: false }],
+      });
     } catch (err) {
       console.error('Failed to show notification', err);
     }
