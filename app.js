@@ -763,6 +763,44 @@ function enhanceSelects(root) {
    הרישום ל-backButton עושה שני דברים: הוא מבטל את ברירת המחדל הזו, והוא
    נותן לנו לתרגם את הלחיצה לאותו history.back() שהדפדפן היה עושה בעצמו.
    כך אותה לוגיקה בדיוק רצה בשני העולמות, ואין כאן עותק שני של הכללים. */
+function focusOrdersIfNeeded() {
+  if (loadMeds().some(med => medStatus(med) !== 'good' && !med.orderSentDate)) {
+    switchTab('orders');
+  }
+}
+
+/* ---------- חזרה לאפליקציה מבחוץ ----------
+
+   שני אירועים, ובכוונה לא אותו טיפול:
+
+   **לחיצה על התראה** — המשתמש ביקש במפורש לראות מה דורש הזמנה, ולכן קופצים
+   לטאב הזה. בפתיחה מאפס זה קורה ממילא בסוף הקובץ; המאזין כאן מכסה את המקרה
+   שהאפליקציה כבר הייתה ברקע — אז הדף לא נטען מחדש, והקוד שבסוף לא רץ.
+
+   **חזרה רגילה** — רק מציירים מחדש, בלי לגעת בטאב. חישוב הימים נעשה בזמן
+   הציור, ולכן אפליקציה שישבה ברקע שבוע מציגה מספרים ישנים עד שמציירים אותה
+   שוב. קפיצה לטאב אחר בכל חזרה הייתה מרגיזה ולא מבוקשת. */
+function setupNativeAppEvents() {
+  if (!isNativeApp) return;
+  const Plugins = window.Capacitor && window.Capacitor.Plugins;
+  if (!Plugins) return;
+
+  if (Plugins.LocalNotifications) {
+    Plugins.LocalNotifications.addListener('localNotificationActionPerformed', () => {
+      render();
+      focusOrdersIfNeeded();
+    });
+  }
+
+  if (Plugins.App) {
+    Plugins.App.addListener('appStateChange', ({ isActive }) => {
+      // לא מציירים מחדש מתחת לחלון פתוח — הציור בונה מחדש כרטיסים, ובורר
+      // שפתוח מעליהם היה נשאר מצביע על אלמנט שכבר לא נמצא בדף.
+      if (isActive && !anyDialogOpen()) render();
+    });
+  }
+}
+
 function setupNativeBackButton() {
   if (!isNativeApp) return;
   const App = (window.Capacitor && window.Capacitor.Plugins)
@@ -1873,12 +1911,11 @@ registerServiceWorker().then((reg) => {
   });
 });
 
+enhanceSelects();
+setupNativeBackButton();
+setupNativeAppEvents();
+
 // נפתחים על "דורש הזמנה" רק אם באמת יש שם משהו — כלומר תרופה שדורשת הזמנה
 // שעדיין לא נשלחה עליה הזמנה. תרופה שכבר הוזמנה ירדה מהטאב הזה, ואין סיבה
 // לפתוח את האפליקציה על מסך ריק.
-enhanceSelects();
-setupNativeBackButton();
-
-if (loadMeds().some(med => medStatus(med) !== 'good' && !med.orderSentDate)) {
-  switchTab('orders');
-}
+focusOrdersIfNeeded();
