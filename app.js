@@ -206,11 +206,20 @@ function medStatus(med) {
   return 'good';
 }
 
+/* אורך הבר נמדד מול **סף ההתראה** של התרופה, ולא מול מספר שרירותי.
+   הבסיס הקודם — alertDays*4, ברצפה של 30 — לא אמר כלום למשתמש, והאורך
+   והצבע נגזרו ממנו משני בסיסים שונים: אפשר היה לקבל בר ירוק ב-27% ובר
+   כתום ב-24%, כלומר הצבע והאורך סותרים זה את זה.
+
+   עם בסיס של פי שניים מהסף, שני גבולות הצבע נוחתים תמיד באותו מקום:
+   המעבר לכתום ב-50% (כי שם days == alertDays), והמעבר לאדום ב-17.5%
+   (כי הסף האדום הוא 35% מ-alertDays). זה נכון בכל תרופה ובכל סף — ולכן
+   אותו מיקום על הבר אומר אותו דבר בכל הכרטיסים. אין לשים כאן רצפה:
+   היא תשבור בדיוק את התכונה הזו. */
 function stockFillPercent(med) {
   const days = daysRemaining(med);
   if (days === Infinity) return 100;
-  const reference = Math.max(med.alertDays * 4, 30);
-  return Math.max(0, Math.min(100, (days / reference) * 100));
+  return Math.max(0, Math.min(100, (days / (med.alertDays * 2)) * 100));
 }
 
 function formatDays(days) {
@@ -1632,16 +1641,31 @@ async function registerPeriodicStockCheck(reg) {
   }
 }
 
+/* המתוזמנות תופסות 2000+i. בלי טווח נפרד, Date.now() % 100000 היה נוחת
+   שם מדי פעם ודורס תזכורת עתידית של תרופה אמיתית. */
+const IMMEDIATE_NOTIFICATION_ID = 900000;
+
 async function showSystemNotification(title, body) {
   if (!(await notificationsAllowed())) return;
   const LN = localNotifications();
   if (isNativeApp && LN) {
     try {
-      // בלי schedule — נורה מיד. isExactNotification מאותה סיבה בדיוק כמו
-      // ב-syncNativeNotifications: בלעדיו הרכיב פותח את מסך ההגדרות של
-      // אנדרואיד 14 גם כאן, למרות שאין פה תזמון כלל.
+      /* שנייה קדימה ולא "מיד", וזה לא קוסמטי: ההתראה נשמרת באחסון של
+         הרכיב, ובכל הדלקה מחדש של הטלפון ובכל עדכון מ-Play הוא מחיה משם
+         את מה שטרם נורה. ההגנות שלו מפני ירי חוזר יושבות כולן בתוך בדיקת
+         "יש schedule" — ולכן התראה בלי תזמון מדלגת עליהן ונורית שוב.
+         עם תזמון היא הופכת לחד-פעמית רגילה, והרכיב פורש אותה כמו שצריך.
+
+         isExactNotification מאותה סיבה כמו ב-syncNativeNotifications:
+         בלעדיו הרכיב פותח את מסך ההגדרות של אנדרואיד 14 גם כאן. */
       await LN.schedule({
-        notifications: [{ id: Date.now() % 100000, title, body, isExactNotification: false }],
+        notifications: [{
+          id: IMMEDIATE_NOTIFICATION_ID + (Date.now() % 90000),
+          title,
+          body,
+          isExactNotification: false,
+          schedule: { at: new Date(Date.now() + 1000), allowWhileIdle: true },
+        }],
       });
     } catch (err) {
       console.error('Failed to show notification', err);
@@ -1895,9 +1919,12 @@ updateNotifyBanner();
 /* באפליקציה הארוזה מבקשים את ההרשאה בהפעלה הראשונה — אין שם באנר, וכל
    מנגנון ההתראות תלוי בה. מי שכיבה התראות בהגדרות לא נשאל. */
 if (isNativeApp && notifyMode() !== 'off') {
-  ensureNotificationPermission().then(() => {
-    checkAndNotify();
-    syncNativeNotifications(loadMeds());
+  ensureNotificationPermission().then(async () => {
+    // await ולא קריאה מקבילה: syncNativeNotifications פותח בסריקה שמנקה
+    // את אחסון הרכיב, ובלי ההמתנה ההתראה שנכתבת כאן נוחתת שם אחרי
+    // הסריקה — ונשארת תקועה עד שמשהו מחיה אותה.
+    await checkAndNotify();
+    await syncNativeNotifications(loadMeds());
   });
 }
 
