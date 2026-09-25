@@ -197,6 +197,12 @@ function cycleChipHTML(med) {
   return `<span class="cycle-chip pause">⏸ בהפסקה · חוזרים לנטילה ב-${formatShortDate(backAt)}</span>`;
 }
 
+/* ⚠️ שתי המספרים כאן **צמוד ל-stockFillPercent**, ואסור לשנות אחד בלי השני.
+   הבר נמדד מול פי שניים מסף ההתראה, ולכן הגבולות נוחתים תמיד באותו מקום:
+   המעבר לכתום ב-50% (days == alertDays), והמעבר לאדום ב-17.5% (0.35 חלקי 2).
+   זה נכון בכל סף שהאפליקציה מציעה — נמדד, לא הונח. שינוי של 0.35, של הכפל
+   בשניים, או הוספת סף התראה קצר מ-6 ימים (שאז הרצפה של 2 נכנסת לפעולה)
+   ישבור את ההתאמה בשקט: הצבע והאורך יחזרו לספר סיפורים שונים. */
 function medStatus(med) {
   const days = daysRemaining(med);
   const urgentThreshold = Math.max(2, med.alertDays * 0.35);
