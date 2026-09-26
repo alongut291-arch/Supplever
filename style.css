@@ -10,6 +10,22 @@
   --status-good:#4C7A5E;
   --status-warn:#D9A441;
   --status-danger:#C1503A;
+
+  /* צבעי **הבר בלבד**. הטוקנים שלמעלה נשארים לטקסט, לנקודת הסטטוס,
+     לבאדג' ולכפתורים — שם הבהרה הייתה הורסת קריאוּת (הירוק הבהיר נותן
+     1.89:1 על לבן, מול 4.94:1 של הכהה).
+
+     הם נבחרו למדידה ולא לעין: בעיוורון צבעים מה שמפריד הוא **בהירות**, לא
+     גוון. בפלטה הקודמת הירוק והאדום עמדו על 1.23 — כלומר כמעט אותה בהירות,
+     ולכן בלתי ניתנים להבחנה. כאן ההפרדה החלשה ביותר מבין שלושת הזוגות היא
+     1.39, וזה המיטב שנמצא בסריקה של כל טווח הירוקים.
+
+     ⚠️ אסור לשנות אחד מהשלושה לבד — הם נבחרו כ**שלישייה**, וכל שינוי בודד
+     מחזיר התנגשות. הבהרת הירוק לבדה, למשל, מפרידה אותו מהאדום אבל מצמידה
+     אותו לכתום (1.07). */
+  --bar-good:#8ACB99;
+  --bar-warn:#C98A2E;
+  --bar-danger:#93331F;
   --capsule-cap:#D98F4E;
   --capsule-body:#F1E4C7;
   --card-bg:#FFFFFF;
@@ -131,9 +147,9 @@ button{ font-family:var(--font-body); cursor:pointer; border:none; }
 .stock-bar-fill{
   position:absolute; inset:0; right:0; border-radius:999px;
 }
-.stock-bar-fill.good{ background:var(--status-good); }
-.stock-bar-fill.warn{ background:var(--status-warn); }
-.stock-bar-fill.danger{ background:var(--status-danger); }
+.stock-bar-fill.good{ background:var(--bar-good); }
+.stock-bar-fill.warn{ background:var(--bar-warn); }
+.stock-bar-fill.danger{ background:var(--bar-danger); }
 
 .med-hint{
   margin-top:14px; font-size:12.5px; color:var(--ink-soft);
