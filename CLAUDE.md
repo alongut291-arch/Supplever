@@ -37,6 +37,7 @@
 | [app.js](app.js) | כל הלוגיקה: localStorage, חישוב ימים, סטטוס, התראות |
 | [sw.js](sw.js) | Service Worker — cache-first לעבודה אופליין + system notifications |
 | [manifest.json](manifest.json) | הגדרות PWA (שם, אייקונים, צבעים, מצב standalone) |
+| [get/index.html](get/index.html) | **עמוד ההורדה — היעד של קוד ה-QR** במצגות. הכתובת לעולם לא משתנה; רק `PLAY_LIVE`/`GROUP_URL` בראשו. `PLAY_LIVE=true` מעביר ישר לחנות. מוחרג במפורש מהמטמון ב-[sw.js](sw.js), אחרת מבקרים קודמים היו רואים גרסה ישנה לתמיד. לא מועתק ל-`www` |
 | [icons/](icons) | אייקוני PWA (192/512/apple-touch) — **טבעת הקפסולות המלאה**, זהה ללוגו, לא כמוסה בודדת. נוצרים ע"י [.claude/make-icons.ps1](.claude/make-icons.ps1) |
 | [.claude/launch.json](.claude/launch.json), [.claude/serve.ps1](.claude/serve.ps1) | שרת פיתוח מקומי ב-PowerShell (ראו הערה למטה) |
 

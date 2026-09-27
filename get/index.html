@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supplever — הורדה</title>
+<meta name="theme-color" content="#1F4A43">
+<link rel="icon" href="../icons/icon-192.png">
+
+<script>
+/* ============================================================
+   ההגדרות היחידות בעמוד הזה. זה העמוד שה-QR מוביל אליו, ולכן
+   הכתובת שלו לעולם לא משתנה — רק מה שכתוב כאן.
+
+   PLAY_LIVE   — false כל עוד האפליקציה בבדיקה סגורה.
+                 ברגע שהיא פתוחה לכולם ב-Production: להפוך ל-true,
+                 והעמוד יעביר מיד לחנות. (ולהעלות את CACHE_NAME ב-sw.js
+                 ולדחוף, כמו בכל שינוי.)
+   GROUP_URL   — הקישור לקבוצת Google Groups שמוגדרת כרשימת הבודקים.
+                 כל עוד הוא ריק, החלק של אנדרואיד מציג "בקרוב".
+   ============================================================ */
+var PLAY_LIVE = false;
+var GROUP_URL = '';
+
+var PLAY_URL  = 'https://play.google.com/store/apps/details?id=app.supplever.android';
+var OPTIN_URL = 'https://play.google.com/apps/testing/app.supplever.android';
+
+// המעבר קורה כאן, לפני שהדף מצויר, כדי שלא יהבהב
+if (PLAY_LIVE) location.replace(PLAY_URL);
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@700;900&family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg-canvas:#EAEFE7;
+  --bg-canvas-deep:#DEE6DA;
+  --ink:#182720;
+  --ink-soft:#51625A;
+  --teal-deep:#1F4A43;
+  --teal-deep-light:#2E6259;
+  --clay:#D98F4E;
+  --clay-dark:#B96F31;
+  --capsule-cap:#D98F4E;
+  --capsule-body:#F1E4C7;
+  --card-bg:#FFFFFF;
+  --border-soft:rgba(24,39,32,0.12);
+  --shadow-soft:0 24px 48px -24px rgba(24,39,32,0.30);
+  --font-display:'Frank Ruhl Libre', serif;
+  --font-body:'Heebo', sans-serif;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+[hidden]{ display:none !important; }
+
+body{
+  background:var(--bg-canvas);
+  color:var(--ink);
+  font-family:var(--font-body);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+.wrap{ max-width:520px; margin:0 auto; padding:32px 16px 48px; }
+
+.brand{ text-align:center; margin-bottom:28px; }
+.brand svg{ width:132px; height:auto; display:block; margin:0 auto 10px; }
+.brand h1{ font-family:var(--font-display); font-weight:900; font-size:36px; color:var(--teal-deep); line-height:1.1; }
+.brand .tag{ color:var(--teal-deep); font-weight:500; margin-top:4px; }
+.brand .pitch{ color:var(--ink-soft); margin-top:14px; font-size:15px; }
+
+.pills{ display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:16px; }
+.pill{
+  background:var(--bg-canvas-deep); color:var(--teal-deep);
+  font-size:13px; font-weight:600; padding:5px 12px; border-radius:999px;
+}
+
+.card{
+  background:var(--card-bg); border:1px solid var(--border-soft);
+  border-radius:20px; padding:22px 20px; margin-bottom:16px;
+  box-shadow:var(--shadow-soft);
+}
+.card h2{ font-family:var(--font-display); font-size:22px; color:var(--ink); margin-bottom:4px; }
+.card .lead{ color:var(--ink-soft); font-size:15px; margin-bottom:16px; }
+
+.steps{ list-style:none; counter-reset:step; }
+.steps li{
+  counter-increment:step; position:relative;
+  padding-right:40px; margin-bottom:16px;
+}
+.steps li::before{
+  content:counter(step);
+  position:absolute; right:0; top:0;
+  width:28px; height:28px; border-radius:50%;
+  background:var(--teal-deep); color:#fff;
+  font-weight:700; font-size:14px;
+  display:flex; align-items:center; justify-content:center;
+}
+.steps li p{ font-size:15px; margin-bottom:8px; }
+
+.btn{
+  display:block; text-align:center; text-decoration:none;
+  font-weight:600; font-size:16px;
+  padding:12px 16px; border-radius:12px;
+}
+.btn-primary{ background:var(--teal-deep); color:#fff; }
+.btn-primary:active{ background:var(--teal-deep-light); }
+.btn-secondary{ background:var(--bg-canvas-deep); color:var(--teal-deep); }
+
+.note{
+  background:#FBF3E8; border-right:3px solid var(--clay);
+  border-radius:8px; padding:10px 12px;
+  font-size:14px; color:var(--ink-soft); margin-top:4px;
+}
+.note b{ color:var(--ink); }
+
+.soon{ color:var(--ink-soft); font-size:15px; }
+
+.howto{ margin-top:16px; font-size:14px; color:var(--ink-soft); }
+.howto p{ margin-bottom:6px; }
+.howto b{ color:var(--ink); }
+
+footer{ text-align:center; font-size:13px; color:var(--ink-soft); margin-top:28px; }
+footer a{ color:var(--teal-deep); }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <header class="brand">
+    <svg viewBox="-9 6 102 44" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <rect id="capsuleShape" x="-7" y="-3.5" width="14" height="7" rx="3.5" ry="3.5"/>
+        <clipPath id="capsuleLeftHalf"><rect x="-7.5" y="-4" width="7.5" height="8"/></clipPath>
+      </defs>
+      <g transform="translate(49.57,36.68) rotate(-132.61)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(34.43,19.32) rotate(-132.61)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(34.43,36.68) rotate(-47.39)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(49.57,19.32) rotate(-47.39)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(88.5,28) rotate(90)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(81.04,42.34) rotate(145)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(63.84,45.08) rotate(197)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(81.04,13.66) rotate(35)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(63.84,10.92) rotate(-6)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(-4.5,28) rotate(90)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(2.96,42.34) rotate(35)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(20.16,45.08) rotate(-17)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(2.96,13.66) rotate(145)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+      <g transform="translate(20.16,10.92) rotate(186)"><use href="#capsuleShape" fill="var(--capsule-body)" stroke="rgba(24,39,32,0.22)" stroke-width="0.6"/><g clip-path="url(#capsuleLeftHalf)"><use href="#capsuleShape" fill="var(--capsule-cap)"/></g></g>
+    </svg>
+    <h1>Supplever</h1>
+    <p class="tag">תמיד צעד אחד לפני גמר המלאי</p>
+    <p class="pitch">עוקבת אחרי מלאי התרופות, מחשבת כמה ימים נשארו,<br>ומראה מתי הגיע הזמן להזמין.</p>
+    <div class="pills">
+      <span class="pill">חינם לגמרי</span>
+      <span class="pill">בלי הרשמה</span>
+      <span class="pill">המידע נשאר בטלפון</span>
+    </div>
+  </header>
+
+  <!-- אנדרואיד: הצטרפות לבדיקה הסגורה -->
+  <section class="card" id="androidCard">
+    <h2>אפליקציה לאנדרואיד</h2>
+
+    <div id="androidJoin" hidden>
+      <p class="lead">האפליקציה נמצאת כרגע בשלב בדיקה ב-Google Play. ההצטרפות לוקחת דקה:</p>
+      <ol class="steps">
+        <li>
+          <p>הצטרפו לקבוצת המשתמשים</p>
+          <a class="btn btn-primary" id="groupLink" href="#" target="_blank" rel="noopener">הצטרפות לקבוצה</a>
+        </li>
+        <li>
+          <p>אשרו את ההשתתפות בעמוד שייפתח</p>
+          <a class="btn btn-primary" id="optinLink" href="#" target="_blank" rel="noopener">אישור השתתפות</a>
+        </li>
+        <li>
+          <p>התקינו מ-Google Play</p>
+          <a class="btn btn-primary" id="installLink" href="#" target="_blank" rel="noopener">התקנה</a>
+        </li>
+      </ol>
+      <p class="note"><b>חשוב:</b> להצטרף עם אותו חשבון Gmail שמחובר לחנות בטלפון. אם החנות מציגה "הפריט לא נמצא", המתינו כמה דקות ונסו שוב.</p>
+    </div>
+
+    <p class="soon" id="androidSoon">בקרוב ב-Google Play. בינתיים אפשר להתחיל כבר עכשיו דרך האתר, כאן למטה.</p>
+  </section>
+
+  <!-- האתר: עובד מיד, בכל טלפון -->
+  <section class="card" id="webCard">
+    <h2>מכל טלפון, כבר עכשיו</h2>
+    <p class="lead">גרסת האתר עובדת גם באייפון וגם באנדרואיד, בלי להוריד כלום.</p>
+    <a class="btn btn-secondary" href="../">פתיחת Supplever</a>
+    <div class="howto">
+      <p>כדי שתופיע כאייקון במסך הבית:</p>
+      <p><b>אייפון (Safari):</b> כפתור השיתוף ⬆ ← "הוספה למסך הבית"</p>
+      <p><b>אנדרואיד (Chrome):</b> תפריט ⋮ ← "הוספה למסך הבית"</p>
+    </div>
+    <p class="note" style="margin-top:14px;"><b>עוברים אחר כך לאפליקציה?</b> לפני המעבר: הגדרות ⚙ ← "גיבוי הנתונים לקובץ", ובאפליקציה החדשה "שחזור מקובץ גיבוי". כך שום תרופה לא הולכת לאיבוד.</p>
+  </section>
+
+  <footer>
+    <p>נבנה בהתנדבות עבור קהילת ה-CF · אלון גוטמן</p>
+    <p style="margin-top:6px;">Supplever אינה מכשיר רפואי ואינה מחליפה ייעוץ של איש מקצוע.</p>
+    <p style="margin-top:6px;"><a href="../privacy.html">מדיניות פרטיות</a></p>
+  </footer>
+
+</main>
+
+<script>
+document.getElementById('optinLink').href = OPTIN_URL;
+document.getElementById('installLink').href = PLAY_URL;
+
+if (GROUP_URL) {
+  document.getElementById('groupLink').href = GROUP_URL;
+  document.getElementById('androidJoin').hidden = false;
+  document.getElementById('androidSoon').hidden = true;
+}
+
+// באייפון אין מה לעשות עם החלק של אנדרואיד — מציגים קודם את מה שרלוונטי
+var isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+if (isIOS) {
+  var web = document.getElementById('webCard');
+  web.parentNode.insertBefore(web, document.getElementById('androidCard'));
+}
+</script>
+</body>
+</html>

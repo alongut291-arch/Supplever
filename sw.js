@@ -1,7 +1,7 @@
 // Service worker for Supplever.
 // Handles: offline app-shell caching, and showing system notifications.
 // Bump CACHE_NAME whenever app files change, so users get the fresh version.
-const CACHE_NAME = 'supplever-v66';
+const CACHE_NAME = 'supplever-v67';
 
 /* תוכנית ההתראות שהדף כותב (ראו writeAlertPlan ב-app.js). מכוון שהיא לא
    נושאת מספר גרסה — היא נתוני משתמש ולא קובץ אפליקציה, ואסור שתימחק
@@ -40,6 +40,11 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  /* עמוד ההורדה (get/) הוא היעד של קוד ה-QR, ובעתיד הוא יעביר לחנות.
+     אם נשמור אותו במטמון, מי שכבר ביקר בו ימשיך לראות את הגרסה הישנה.
+     לכן הוא תמיד מגיע מהרשת. */
+  if (new URL(event.request.url).pathname.includes('/get/')) return;
 
   event.respondWith(
     caches.match(event.request).then((cached) => {
