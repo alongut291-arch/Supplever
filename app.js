@@ -259,6 +259,14 @@ function formatAlertDays(alertDays) {
   return ALERT_DAYS_LABELS[alertDays] || `${alertDays} ימים`;
 }
 
+/* אות שימוש נצמדת למילה — "משבועיים", לא "מ-שבועיים". לפני ספרה היא דווקא
+   כן נקשרת במקף ("מ-45 ימים"), וזה המקרה היחיד שנשאר כאן: ששת הערכים
+   הקבועים הם מילים, והנפילה למספר מכסה רק ערך שנשמר פעם ואינו ברשימה. */
+function alertDaysFrom(alertDays) {
+  const label = formatAlertDays(alertDays);
+  return /^\d/.test(label) ? `מ-${label}` : `מ${label}`;
+}
+
 /* ---------- rendering ---------- */
 
 const listEl = document.getElementById('medList');
@@ -307,7 +315,7 @@ function medCardHTML(med, extraHTML = '', showReceiveBtn = true) {
       <div class="stock-bar">
         <div class="stock-bar-fill ${status}" style="width:${fill}%"></div>
       </div>
-      <p class="med-hint">מלאי נוכחי: ${stock} יחידות${med.pillsPerBox ? ` (כ-${Math.round((stock / med.pillsPerBox) * 10) / 10} קופסאות)` : ''} · התראה מ-${formatAlertDays(med.alertDays)} לפני הסוף</p>
+      <p class="med-hint">מלאי נוכחי: ${stock} יחידות${med.pillsPerBox ? ` (כ-${Math.round((stock / med.pillsPerBox) * 10) / 10} קופסאות)` : ''} · התראה ${alertDaysFrom(med.alertDays)} לפני הסוף</p>
       ${extraHTML}
       ${showReceiveBtn ? `<button class="received-btn" data-action="receive" data-id="${med.id}">קיבלתי הזמנה — עדכן מלאי</button>` : ''}
     </div>
