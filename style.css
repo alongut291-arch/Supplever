@@ -11,9 +11,12 @@
   --status-warn:#D9A441;
   --status-danger:#C1503A;
 
-  /* צבעי **הבר בלבד**. הטוקנים שלמעלה נשארים לטקסט, לנקודת הסטטוס,
-     לבאדג' ולכפתורים — שם הבהרה הייתה הורסת קריאוּת (הירוק הבהיר נותן
-     1.89:1 על לבן, מול 4.94:1 של הכהה).
+  /* צבעי **השטחים הצבועים**: הבר ונקודת הסטטוס שלצד שם התרופה. שניהם
+     מציינים את אותו מצב, ולכן הם חולקים צבע.
+
+     הטוקנים שלמעלה נשארים ל**טקסט**, לבאדג' ולכפתורים — שם הבהרה הייתה
+     הורסת קריאוּת (הירוק הבהיר נותן 1.89:1 על לבן, מול 4.94:1 של הכהה).
+     ⚠️ ולכן אסור להעביר גם אותם לטוקנים שלמטה.
 
      הם נבחרו למדידה ולא לעין: בעיוורון צבעים מה שמפריד הוא **בהירות**, לא
      גוון. בפלטה הקודמת הירוק והאדום עמדו על 1.23 — כלומר כמעט אותה בהירות,
@@ -129,9 +132,11 @@ button{ font-family:var(--font-body); cursor:pointer; border:none; }
 .med-card-top-left{ display:flex; align-items:flex-start; gap:12px; min-width:0; flex:1; }
 .med-card-top-left > div{ min-width:0; }
 .status-dot{ width:12px; height:12px; border-radius:50%; flex-shrink:0; margin-top:6px; }
-.status-good{ background:var(--status-good); }
-.status-warn{ background:var(--status-warn); }
-.status-danger{ background:var(--status-danger); }
+/* הנקודה לוקחת את צבעי הבר ולא את צבעי הטקסט — היא מציינת את אותו הסטטוס
+   של הבר שמתחתיה, ושני צבעים שונים לאותו מצב קראו כשני דברים שונים. */
+.status-good{ background:var(--bar-good); }
+.status-warn{ background:var(--bar-warn); }
+.status-danger{ background:var(--bar-danger); }
 .med-name{ font-family:var(--font-display); font-size:18px; font-weight:700; overflow-wrap:break-word; word-break:break-word; unicode-bidi:plaintext; }
 .med-name.single-line{ text-align:right; }
 .med-dose{ font-size:13px; color:var(--ink-soft); margin-top:2px; }
