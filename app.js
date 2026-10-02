@@ -1594,13 +1594,22 @@ async function syncNativeNotifications(meds) {
     if (!(await notificationsAllowed())) return;
 
     const list = [];
-    meds.filter(med => !med.orderSentDate).forEach((med, i) => {
+    /* רק תרופה שטרם חצתה את הסף מקבלת תזכורת עתידית.
+       ⚠️ ולא די בבדיקת "התאריך כבר עבר" שמתחת: alertDateFor עוטף את החישוב
+       ב-Math.max(0,…), ולכן לתרופה שחצתה את הסף לפני שבוע הוא מחזיר את **היום**
+       ולא תאריך בעבר. התוצאה הייתה שכל פתיחה של האפליקציה לפני 9:00 תזמנה
+       לתרופה כזו התראה חדשה לאותו בוקר — שוב ושוב, על תרופה שיושבת ב"דורש
+       הזמנה" כבר ימים. אחרי 9:00 התאריך כבר עבר והבדיקה שמתחת כן תפסה אותו,
+       ולכן הבאג היה נראה אקראי.
+       על תרופות שכבר חצו מתריעה checkAndNotify בפתיחת האפליקציה, והדגל
+       notifiedForShortage שומר שזה יקרה פעם אחת ולא בכל פתיחה. */
+    meds.filter(med => !med.orderSentDate && medStatus(med) === 'good').forEach((med, i) => {
       const iso = alertDateFor(med);
       if (!iso) return;
       const at = parseDateInput(iso);
       if (!at) return;
       at.setHours(9, 0, 0, 0);                    // בוקר, לא באמצע הלילה
-      if (at.getTime() <= Date.now()) return;     // כבר עבר — ההתראה בפתיחה מטפלת בזה
+      if (at.getTime() <= Date.now()) return;     // רשת ביטחון, אחרי הסינון שלמעלה
       list.push({
         id: 2000 + i,
         title: `${med.name} — מומלץ להזמין`,
