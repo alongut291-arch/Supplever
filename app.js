@@ -289,7 +289,6 @@ const cartListSentEl = document.getElementById('cartListSent');
 const cartSentLabelEl = document.getElementById('cartSentLabel');
 const cartSentCountEl = document.getElementById('cartSentCount');
 const cartEmptyStateEl = document.getElementById('cartEmptyState');
-const cartHintEl = document.getElementById('cartHint');
 const cartBadgeEl = document.getElementById('cartBadge');
 const cartActionsEl = document.getElementById('cartActions');
 const sendEmailInfoEl = document.getElementById('sendEmailInfo');
@@ -350,7 +349,7 @@ function orderPlanningHTML(med) {
     ? `כמות להזמנה: ${boxesLabel(neededBoxes)} (כ-${neededPills} יחידות)`
     : `כמות להזמנה: כ-${neededPills} יחידות`;
 
-  const toggleLabel = med.inOrder ? '✓ ברשימת ההזמנה — הסר' : '+ הוסף להזמנה';
+  const toggleLabel = med.inOrder ? '✓ ברשימת ההזמנות — הסר' : '+ הוסף להזמנה';
   const toggleClass = med.inOrder ? 'toggle-order-btn in-order' : 'toggle-order-btn';
 
   return `
@@ -587,15 +586,10 @@ function renderCart(sortedMeds) {
     cartPendingLabelEl.hidden = true;
     cartSentLabelEl.hidden = true;
     cartEmptyStateEl.style.display = 'block';
-    cartHintEl.style.display = 'none';
     cartActionsEl.style.display = 'none';
     return;
   }
   cartEmptyStateEl.style.display = 'none';
-  cartHintEl.style.display = 'block';
-  cartHintEl.textContent = inCart.length === 1
-    ? 'תרופה אחת ברשימת ההזמנות'
-    : `${inCart.length} תרופות ברשימת ההזמנות`;
 
   const pending = inCart.filter(med => !med.orderSentDate);
   const sent = inCart.filter(med => med.orderSentDate);
@@ -604,9 +598,9 @@ function renderCart(sortedMeds) {
   // עדיף להסתיר את הכפתור מלהשאיר אותו לוחץ ולא עושה כלום
   cartActionsEl.style.display = pending.length > 0 ? 'block' : 'none';
 
-  // כל עוד שום דבר לא נשלח, נשארים במראה הרגיל של רשימה אחת בלי כותרות —
-  // הפיצול לשתי קבוצות מופיע רק אחרי שליחה ראשונה, כשיש בפועל מה להבחין ביניהם.
-  cartPendingLabelEl.hidden = sent.length === 0 || pending.length === 0;
+  // "טרם נשלחה הזמנה" מופיעה בכל פעם שיש מה לשלוח, גם כשעוד לא נשלח דבר —
+  // היא הכותרת שאומרת למשתמש מה הוא רואה.
+  cartPendingLabelEl.hidden = pending.length === 0;
   cartPendingCountEl.textContent = pending.length;
   cartListPendingEl.innerHTML = pending.map(cartRowHTML).join('');
 
