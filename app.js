@@ -593,8 +593,9 @@ function renderCart(sortedMeds) {
   }
   cartEmptyStateEl.style.display = 'none';
   cartHintEl.style.display = 'block';
-  const countText = inCart.length === 1 ? 'תרופה אחת ברשימת ההזמנה' : `${inCart.length} תרופות ברשימת ההזמנה`;
-  cartHintEl.textContent = `${countText} — מוכן לקחת לבית המרקחת`;
+  cartHintEl.textContent = inCart.length === 1
+    ? 'תרופה אחת ברשימת ההזמנות'
+    : `${inCart.length} תרופות ברשימת ההזמנות`;
 
   const pending = inCart.filter(med => !med.orderSentDate);
   const sent = inCart.filter(med => med.orderSentDate);
