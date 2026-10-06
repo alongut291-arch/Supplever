@@ -17,7 +17,11 @@
                  והעמוד יעביר מיד לחנות. (ולהעלות את CACHE_NAME ב-sw.js
                  ולדחוף, כמו בכל שינוי.)
    GROUP_URL   — הקישור לקבוצת Google Groups שמוגדרת כרשימת הבודקים.
-                 כל עוד הוא ריק, החלק של אנדרואיד מציג "בקרוב".
+                 כשהוא מוגדר, העמוד מציג את שלבי ההצטרפות לבדיקה.
+
+   כששניהם ריקים — האפליקציה עוד לא בחנות ואין דרך להצטרף — אין טעם
+   לעצור כאן על "בקרוב": מי שסרק את הקוד רוצה להתחיל עכשיו, ולכן הוא
+   מועבר ישר לגרסת האתר. כך אותו QR מוביל לאתר היום ולחנות מחר.
    ============================================================ */
 var PLAY_LIVE = false;
 var GROUP_URL = '';
@@ -27,6 +31,7 @@ var OPTIN_URL = 'https://play.google.com/apps/testing/app.supplever.android';
 
 // המעבר קורה כאן, לפני שהדף מצויר, כדי שלא יהבהב
 if (PLAY_LIVE) location.replace(PLAY_URL);
+else if (!GROUP_URL) location.replace('../');
 </script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
