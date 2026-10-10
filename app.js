@@ -933,6 +933,9 @@ function readFreqFromForm() {
 function updateFreqUI() {
   const mode = form.freqMode.value;
   Object.keys(freqBlocks).forEach(key => { freqBlocks[key].hidden = key !== mode; });
+  /* מעבר בין מצבי תדירות מסתיר שדות — ושגיאה על שדה מוסתר היא הודעה שאי
+     אפשר לתקן. */
+  clearFormErrors();
 
   if (mode !== 'cycle') return;
 
@@ -1099,6 +1102,7 @@ function closeModal(fromBackButton = false) {
   overlay.classList.remove('open');
   editingId = null;
   form.reset();
+  clearFormErrors();   // אחרת שגיאות מניסיון קודם מחכות בפתיחה הבאה
   closeSuggestions();
   if (!fromBackButton) registerDialogClose();
 }
@@ -1197,6 +1201,76 @@ overlay.addEventListener('click', (e) => {
   if (e.target === overlay) closeModal();
 });
 
+/* ---------- בדיקת הטופס ---------- */
+
+/* עד אוקטובר 2026 הבדיקות ישבו בתנאי אחד ארוך שעשה `return` בשקט: לחיצה על
+   "שמירה" פשוט לא עשתה כלום, והמשתמש נשאר מול טופס תקוע בלי רמז מה חסר.
+   בודק דיווח על זה בדיוק. עכשיו כל בדיקה יודעת לאיזה שדה היא שייכת ומה
+   להגיד עליו.
+
+   ⚠️ הטופס מסומן novalidate: בלי זה הדפדפן חוסם קודם את השדות עם required
+   ומציג בועית משלו — בעיצוב אחר, ולעיתים באנגלית, תלוי ב-WebView. שתי מערכות
+   הודעות באותו טופס בלבלו יותר משעזרו, ולכן כל הבדיקות כאן. */
+function medFormProblems(med) {
+  const problems = [];
+  const add = (id, message) => problems.push({ id, message });
+
+  /* `!(x > 0)` ולא `x <= 0` — כדי לתפוס גם שדה ריק, ש-parseFloat מחזיר
+     עליו NaN, וכל השוואה איתו היא false. */
+  if (!med.name) add('name', 'יש להזין שם');
+  if (!(med.pillsPerBox > 0)) add('pillsPerBox', 'יש להזין מספר גדול מאפס');
+
+  const rateField = { weekly: 'weeklyRate', cycle: 'cycleRate' }[med.freqMode] || 'dailyRate';
+  if (!(med.dailyRate > 0)) add(rateField, 'יש להזין מספר גדול מאפס');
+  if (med.freqMode === 'cycle') {
+    if (!(med.cycleOnDays > 0)) add('cycleOnDays', 'יש להזין מספר גדול מאפס');
+    if (!(med.cycleOffDays > 0)) add('cycleOffDays', 'יש להזין מספר גדול מאפס');
+  }
+
+  /* במלאי 0 הוא ערך תקין — למי שהתרופה נגמרה לו — ולכן הניסוח שונה. */
+  if (!(med.currentBoxes >= 0)) add('currentBoxes', 'יש להזין מספר');
+  if (!(med.currentStock >= 0)) add('currentStock', 'יש להזין מספר');
+
+  return problems;
+}
+
+function clearFieldError(field) {
+  if (!field) return;
+  field.classList.remove('invalid');
+  const line = field.parentElement && field.parentElement.querySelector('.field-error');
+  if (line) line.remove();
+}
+
+function clearFormErrors() {
+  form.querySelectorAll('.field-error').forEach(el => el.remove());
+  form.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
+}
+
+function showFormProblems(problems) {
+  clearFormErrors();
+  problems.forEach(({ id, message }) => {
+    const field = document.getElementById(id);
+    if (!field) return;
+    field.classList.add('invalid');
+    const line = document.createElement('p');
+    line.className = 'field-error';
+    line.textContent = message;
+    field.insertAdjacentElement('afterend', line);
+  });
+
+  /* בטופס ארוך הודעה שיושבת מחוץ למסך שקולה לאין הודעה — וזה בדיוק מה
+     שקרה לבודק. לכן גוללים אל הראשון שנכשל וממקדים אותו. */
+  const first = problems.length && document.getElementById(problems[0].id);
+  if (first) {
+    first.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    first.focus({ preventScroll: true });
+  }
+}
+
+/* השגיאה נעלמת ברגע שמתקנים, ולא רק בשמירה הבאה. */
+form.addEventListener('input', (e) => clearFieldError(e.target));
+form.addEventListener('change', (e) => clearFieldError(e.target));
+
 form.addEventListener('submit', (e) => {
   e.preventDefault();
   const med = {
@@ -1209,11 +1283,12 @@ form.addEventListener('submit', (e) => {
     stockDate: isoDate(startOfToday()),   // המלאי שהוזן נכון להיום
     alertDays: parseInt(form.alertDays.value, 10),
   };
-  if (!med.name || !med.pillsPerBox || med.pillsPerBox <= 0 || !med.dailyRate || med.dailyRate <= 0
-    || isNaN(med.currentBoxes) || med.currentBoxes < 0 || isNaN(med.currentStock) || med.currentStock < 0) {
+  const problems = medFormProblems(med);
+  if (problems.length) {
+    showFormProblems(problems);
     return;
   }
-  if (med.freqMode === 'cycle' && (!med.cycleOnDays || !med.cycleOffDays)) return;
+  clearFormErrors();
   localStorage.setItem(DEFAULT_ALERT_DAYS_KEY, String(med.alertDays));
   if (editingId) {
     updateMed(editingId, med);
