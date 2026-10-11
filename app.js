@@ -815,6 +815,10 @@ function setupNativeAppEvents() {
       // לא מציירים מחדש מתחת לחלון פתוח — הציור בונה מחדש כרטיסים, ובורר
       // שפתוח מעליהם היה נשאר מצביע על אלמנט שכבר לא נמצא בדף.
       if (isActive && !anyDialogOpen()) render();
+      /* ⚠️ ובכוונה אין כאן checkAndNotify. התזמון מראש כבר מכסה אפליקציה
+         שיושבת ברקע — האזעקה נקבעת ביום ההזנה ויורה ביום החצייה גם בלי שאיש
+         יפתח. קריאה כאן הייתה יורה התראה מיידית על מה שהאזעקה כבר הודיעה
+         עליו בתשע, כלומר התראה כפולה על אותה תרופה. */
     });
   }
 }
@@ -1656,30 +1660,42 @@ async function syncNativeNotifications(meds) {
   const LN = localNotifications();
   if (!isNativeApp || !LN) return;
   try {
+    /* נקבע קודם אם בכלל מתזמנים, ורק אז מבטלים. בסדר ההפוך כשל רגעי בקריאת
+       ההרשאה היה מוחק את כל ההתראות הממתינות ולא מתזמן דבר במקומן — והמשתמש
+       היה מגלה את זה רק בפתיחה הבאה של האפליקציה, שהיא בדיוק מה שלא קורה
+       אצל מי שזקוק להתראה. */
+    const wanted = notifyMode() === 'background' && await notificationsAllowed();
+
     const pending = await LN.getPending();
     if (pending && pending.notifications && pending.notifications.length) {
       await LN.cancel({ notifications: pending.notifications.map(n => ({ id: n.id })) });
     }
-    if (notifyMode() !== 'background') return;
-    if (!(await notificationsAllowed())) return;
+    if (!wanted) return;
 
     const list = [];
-    /* רק תרופה שטרם חצתה את הסף מקבלת תזכורת עתידית.
-       ⚠️ ולא די בבדיקת "התאריך כבר עבר" שמתחת: alertDateFor עוטף את החישוב
-       ב-Math.max(0,…), ולכן לתרופה שחצתה את הסף לפני שבוע הוא מחזיר את **היום**
-       ולא תאריך בעבר. התוצאה הייתה שכל פתיחה של האפליקציה לפני 9:00 תזמנה
-       לתרופה כזו התראה חדשה לאותו בוקר — שוב ושוב, על תרופה שיושבת ב"דורש
-       הזמנה" כבר ימים. אחרי 9:00 התאריך כבר עבר והבדיקה שמתחת כן תפסה אותו,
-       ולכן הבאג היה נראה אקראי.
-       על תרופות שכבר חצו מתריעה checkAndNotify בפתיחת האפליקציה, והדגל
-       notifiedForShortage שומר שזה יקרה פעם אחת ולא בכל פתיחה. */
-    meds.filter(med => !med.orderSentDate && medStatus(med) === 'good').forEach((med, i) => {
+    /* מי מקבל תזכורת עתידית: תרופה שטרם חצתה את הסף — ותרופה שחצתה אבל
+       **המשתמש עדיין לא קיבל עליה התראה**.
+
+       ⚠️ התנאי השני הוא תיקון של רגרסיה שגרמתי: בסינון `=== 'good'` לבדו,
+       פתיחה של האפליקציה ביום החצייה לפני 9:00 הרגה את ההתראה של אותו בוקר.
+       הסנכרון מבטל קודם כול את כל ההתראות הממתינות, ואז התרופה כבר אינה
+       'good' — כך שההתראה שתוזמנה אתמול נמחקה ולא נוצרה מחדש, ובתשע לא קרה
+       כלום. בודק דיווח על זה בדיוק, ולא מפני שמשהו במכשיר שלו שונה: הוא פשוט
+       הסתכל באפליקציה באותו בוקר.
+
+       ⚠️ ואסור לוותר על התנאי הראשון ולהחזיר "כל מה שחצה": זה היה הבאג
+       ההפוך — alertDateFor רוצף כל עבר ל**היום**, ולכן תרופה שיושבת ב"דורש
+       הזמנה" שבוע קיבלה התראה חדשה בכל בוקר. הדגל notifiedForShortage הוא
+       מה שמבדיל בין "טרם נאמר לו" לבין "כבר נאמר לו". */
+    meds.filter(med => !med.orderSentDate
+      && (medStatus(med) === 'good' || !med.notifiedForShortage)).forEach((med, i) => {
       const iso = alertDateFor(med);
       if (!iso) return;
       const at = parseDateInput(iso);
       if (!at) return;
       at.setHours(9, 0, 0, 0);                    // בוקר, לא באמצע הלילה
-      if (at.getTime() <= Date.now()) return;     // רשת ביטחון, אחרי הסינון שלמעלה
+      /* התשע של היום כבר עבר — על זה מתריעה checkAndNotify בפתיחה הבאה. */
+      if (at.getTime() <= Date.now()) return;
       list.push({
         id: 2000 + i,
         title: `${med.name} — מומלץ להזמין`,
