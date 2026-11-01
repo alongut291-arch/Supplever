@@ -1,7 +1,7 @@
 // Service worker for Supplever.
 // Handles: offline app-shell caching, and showing system notifications.
 // Bump CACHE_NAME whenever app files change, so users get the fresh version.
-const CACHE_NAME = 'supplever-v79';
+const CACHE_NAME = 'supplever-v80';
 
 /* תוכנית ההתראות שהדף כותב (ראו writeAlertPlan ב-app.js). מכוון שהיא לא
    נושאת מספר גרסה — היא נתוני משתמש ולא קובץ אפליקציה, ואסור שתימחק
@@ -14,16 +14,35 @@ const APP_SHELL = [
   './index.html',
   './style.css',
   './app.js',
+  './i18n.js',
   './medications-db.js',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
 ];
 
+/* ⚠️ `cache: 'reload'` — ובלעדיו העדכון יכול להיכשל בשקט.
+
+   `cache.addAll(APP_SHELL)` רגיל עובר דרך **מטמון ה-HTTP של הדפדפן**, ו-GitHub
+   Pages מגיש את הקבצים עם `max-age=600`. כלומר ה-Service Worker החדש עלול למלא
+   את המטמון החדש שלו ב**קבצים הישנים** שיושבים שם — וזה קרה בפועל בנובמבר 2026:
+   `supplever-v79` נבנה והכיל `index.html` ו-`i18n.js` מלפני השינוי. המשתמש ראה
+   בורר שפות חדש עם ערבית, אבל המילון שנטען היה הישן, ולכן לחיצה על ערבית נפלה
+   חזרה לעברית **בלי שום שגיאה** — וערבית היא RTL כמו עברית, אז גם הכיוון לא
+   השתנה, ונראה כאילו הכפתור שבור.
+
+   `cache: 'reload'` מכריח כל קובץ בקליפה להגיע מהרשת. **העלאת CACHE_NAME לבדה
+   אינה מספיקה**, וזו המסקנה החשובה כאן.
+
+   ⚠️ **וכל קובץ חדש של האפליקציה חייב להיכנס ל-APP_SHELL.** `i18n.js` לא היה שם,
+   ולכן נשמר רק דרך ה-fetch האופורטוניסטי למטה — שהוא cache-first, כלומר העותק
+   הישן שלו היה מוגש לנצח. */
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
+      .then((cache) => cache.addAll(
+        APP_SHELL.map((url) => new Request(url, { cache: 'reload' }))
+      ))
       .then(() => self.skipWaiting())
   );
 });
@@ -52,8 +71,12 @@ self.addEventListener('fetch', (event) => {
 
       return fetch(event.request)
         .then((response) => {
-          const isSameOrigin = new URL(event.request.url).origin === self.location.origin;
-          if (response.ok && isSameOrigin) {
+          const url = new URL(event.request.url);
+          const isSameOrigin = url.origin === self.location.origin;
+          /* כתובת עם סימן שאלה היא כמעט תמיד עקיפת מטמון חד-פעמית
+             (`index.html?cb=...`). שמירתה מצמיחה במטמון עותקים כפולים של אותו
+             קובץ, שאיש לא יגיש אבל גם לא ינקה. */
+          if (response.ok && isSameOrigin && !url.search) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }
