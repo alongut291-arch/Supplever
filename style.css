@@ -64,14 +64,38 @@ button{ font-family:var(--font-body); cursor:pointer; border:none; }
 .wrap{ max-width:640px; margin:0 auto; padding:0 20px; }
 
 /* header */
+/* ⚠️ align-items:flex-start — ולא center — כדי ששני כפתורי הכותרת יישבו
+   בקצה העליון ולא ימורכזו מול בלוק הלוגו, שגבוה מהם. על הלוגו עצמו אין לזה
+   השפעה: הוא הגבוה מבין השניים, ולכן הוא זה שקובע את גובה הכותרת. */
 .app-header{
-  display:flex; align-items:center; justify-content:space-between;
+  display:flex; align-items:flex-start; justify-content:space-between;
   padding:24px 20px; max-width:640px; margin:0 auto;
+}
+/* מקבץ כפתורי הכותרת (שפה + הגדרות). `margin-top` מקזז את הריפוד הפנימי
+   של הכפתור, כדי שהאייקון עצמו — ולא תיבת הכפתור — יתיישר עם ראש הלוגו. */
+.header-actions{
+  display:flex; align-items:center; gap:2px;
+  flex-shrink:0; margin-top:-6px;
 }
 .logo{ display:flex; align-items:center; gap:12px; }
 .logo-icon{ width:70px; height:30px; display:block; flex-shrink:0; }
 .app-title{ font-family:var(--font-display); font-size:22px; font-weight:700; line-height:1.15; }
 .app-sub{ font-size:13px; color:var(--teal-deep); font-weight:600; margin-top:5px; line-height:1.3; }
+
+/* ⚠️ כפתור שני בכותרת גוזל ~40px מרוחב בלוק הלוגו, ומתחת ל-376px המשפט
+   "תמיד צעד אחד לפני גמר המלאי" כבר לא נכנס בשורה אחת ונשבר לשתיים.
+   נמדד: ב-375px חסרו 0.8px בלבד, ולכן די בקיזוז קטן. שלושת השינויים כאן
+   מחזירים יחד ~29px, ומספיקים עד 360px — הרוחב הנפוץ באנדרואיד בינוני.
+
+   ⚠️ ב-320px המשפט עדיין נשבר לשתי שורות. זה מקובל ולא מצריך תיקון: אין
+   שם גלישה אופקית, הפריסה לא נשברת, וכיסוי הרוחב הזה היה מחייב להקטין את
+   הלוגו מתחת לגודל שנראה טוב. **כל כפתור שלישי בכותרת יחזיר את הבעיה —
+   למדוד מחדש לפני שמוסיפים.** */
+@media (max-width:400px){
+  .app-header{ padding-left:13px; padding-right:13px; }
+  .logo{ gap:8px; }
+  .logo-icon{ width:60px; height:26px; }
+}
 
 /* tabs */
 .tabs{
