@@ -15,6 +15,19 @@
    לגמרי. כל ניסיון לפתור את זה בהצמדת ס' סופית נשבר בשפה הבאה.
    ============================================================ */
 
+/* עוזר הריבוי של רוסית: שלוש צורות לפי הספרות האחרונות (1 · 2-4 · 5+),
+   כולל החריג 11-14 ששובר את הכלל, ושבר עשרוני שלוקח את צורת ה-"few".
+   ⚠️ מוגדר כאן, מחוץ ל-STRINGS, כי הערכים ב-ru קוראים לו. */
+const ruPlural = (n, one, few, many) => {
+  const abs = Math.abs(n);
+  if (!Number.isInteger(abs)) return few;
+  const mod100 = abs % 100;
+  const mod10 = abs % 10;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+};
+
 const STRINGS = {
 
   he: {
@@ -477,6 +490,633 @@ const STRINGS = {
   'email.sendBtn':             'Save and send',
   'email.editTitle':           'Update email address',
   'email.editBtn':             'Save',
+  },
+
+  /* ⚠️ ערבית — טרם עברה ביקורת של דובר שפת אם. מוסתרת מהבורר
+     ב-index.html עד שתאושר. ar מחזיקה 4 פונקציות נוספות מעבר ל-11
+     של he/en: בערבית צורת השם משתנה לפי המספר (יחיד · זוגי · 3-10 · 11+),
+     ולכן מפתח שהוא מחרוזת עם {placeholder} בשפות האחרות חייב כאן
+     הסתעפות. t() בודקת את טיפוס הערך לכל שפה בנפרד, ולכן זה תקין. */
+  ar: {
+  /* כותרת */
+  'app.tagline':        'دائمًا خطوة قبل نفاد المخزون',
+  'a11y.settings':      'الإعدادات',
+  'a11y.language':      'لغة التطبيق',
+
+  /* טאבים */
+  'tabs.stock':         'مخزوني',
+  'tabs.orders':        'بحاجة إلى طلب',
+  'tabs.cart':          'قائمة الطلبات',
+
+  /* באנר ההתראות */
+  'notify.banner':      'شغِّلوا التنبيهات لتعرفوا فورًا عند فتح التطبيق إن كان هناك دواء بحاجة إلى طلب',
+  'notify.enable':      'تشغيل التنبيهات',
+  'notify.later':       'ليس الآن',
+
+  /* מסכי ריק */
+  'empty.stock.title':  'لا توجد أدوية بعد',
+  'empty.stock.text':   'اضغطوا على "إضافة دواء" لتبدأوا متابعة المخزون',
+  'empty.orders.title': 'كل شيء محدَّث',
+  'empty.orders.text':  'لا يوجد حاليًا أي دواء بحاجة إلى طلب',
+  'empty.cart.title':   'قائمة الطلبات فارغة',
+  'empty.cart.text':    'اضغطوا على "إضافة إلى الطلب" في "بحاجة إلى طلب" لتبدأوا بتجميع قائمة',
+
+  /* הזמנות בדרך
+     ערבית: יחיד / מצב זוגי (دواء واحد · دواءان) / רבים 3–10 (أدوية) / 11+
+     (דואר יחיד במושא: دواءً). גם הכינוי החוזר והפועל נגררים אחרי המספר:
+     وصوله · وصولهما · وصولها. */
+  'orders.onTheWay.title': 'الطلبات في الطريق',
+  'orders.onTheWay.text': (v) => v.n === 1
+    ? 'تم طلب دواء واحد وهو في انتظار الوصول في "قائمة الطلبات" — حدِّثوا المخزون عند وصوله'
+    : v.n === 2
+      ? 'تم طلب دواءين وهما في انتظار الوصول في "قائمة الطلبات" — حدِّثوا المخزون عند وصولهما'
+      : (Number.isInteger(v.n) && v.n >= 3 && v.n <= 10)
+        ? `تم طلب ${v.n} أدوية وهي في انتظار الوصول في "قائمة الطلبات" — حدِّثوا المخزون عند وصولها`
+        : `تم طلب ${v.n} دواءً وهي في انتظار الوصول في "قائمة الطلبات" — حدِّثوا المخزون عند وصولها`,
+
+  /* ימים שנותרו
+     הפועל بقي מתאים ליחיד ולמצב הזוגי, بقيت לרבים שאינם אנושיים (3–10),
+     וחוזר ל-بقي מ-11 ומעלה כי המנוי שם חוזר ליחיד (15 يومًا). */
+  'days.none':          'نفد المخزون',
+  'days.left': (v) => v.n === 1
+    ? 'بقي يوم واحد'
+    : v.n === 2
+      ? 'بقي يومان'
+      : (Number.isInteger(v.n) && v.n >= 3 && v.n <= 10)
+        ? `بقيت ${v.n} أيام`
+        : `بقي ${v.n} يومًا`,
+
+  /* כפתורים ראשיים */
+  'fab.add':            '+ إضافة دواء',
+  'footer.privacy':     'سياسة الخصوصية',
+
+  /* ===== index.html ===== */
+  'app.title':                   'Supplever — مخزوني',
+
+  /* section labels */
+  'orders.label.pending':        'لم تُضف إلى قائمة الطلبات بعد',
+  'orders.label.added':          'مُضافة إلى قائمة الطلبات',
+  'cart.label.pending':          'لم تُطلب بعد',
+  'cart.label.sent':             'تم طلبها',
+  'cart.send':                   'إرسال قائمة الطلبات',
+
+  /* add / edit medicine form
+     'الدواء' للاسم. 'التركيز' ולא 'الجرعة' למינון — זה גם מדויק יותר
+     (המספר שמודפס על הקופסה הוא ריכוז) וגם נקי ממשמעות של הוראת מתן. */
+  'form.name':                   'اسم الدواء',
+  'form.name.placeholder':       'مثال: Omeprazole',
+  'form.dose':                   'التركيز (اختياري)',
+  'form.dose.placeholder':       'مثال: 20 mg',
+  'form.pillsPerBox':            'عدد الوحدات في العلبة',
+
+  /* insulin pen helper */
+  'form.pen.title':              'تم التعرف على قلم أنسولين — سنحسب لكم مجموع الوحدات في العلبة',
+  'form.pen.pensPerBox':         'عدد الأقلام في العلبة',
+  'form.pen.unitsPerPen':        'عدد الوحدات في كل قلم',
+  'form.pen.hint':               'سيُملأ حقل "عدد الوحدات في العلبة" أدناه تلقائيًا — يمكنكم تعديل الأرقام إذا كان التركيز مختلفًا',
+
+  /* frequency
+     'وتيرة الاستهلاك' = קצב הצריכה. תיאור של מה שהמשתמש כבר עושה, לא הוראה. */
+  'form.freq':                   'وتيرة الاستهلاك',
+  'form.freq.daily':             'كل يوم',
+  'form.freq.weekly':            'بضع مرات في الأسبوع',
+  'form.freq.cycle':             'على شكل دورات — فترة استخدام ثم انقطاع',
+  'form.dailyRate':              'وحدات في اليوم',
+  'form.weeklyRate':             'وحدات في كل مرة',
+  'form.timesPerWeek':           'عدد المرات في الأسبوع',
+  /* אפשרויות בורר עומדות בפני עצמן, ולכן מצב זוגי בנומינטיב: مرتان */
+  'form.timesPerWeek.1':         'مرة واحدة',
+  'form.timesPerWeek.2':         'مرتان',
+  'form.timesPerWeek.3':         '3 مرات',
+  'form.timesPerWeek.4':         '4 مرات',
+  'form.timesPerWeek.5':         '5 مرات',
+  'form.timesPerWeek.6':         '6 مرات',
+  'form.cycle.presetMonth':      'شهر استخدام / شهر انقطاع',
+  'form.cycle.presetWeek':       'أسبوع / أسبوع',
+  'form.cycleRate':              'وحدات في اليوم (في أيام الاستخدام)',
+  'form.cycleOnDays':            'أيام الاستخدام',
+  'form.cycleOffDays':           'أيام الانقطاع',
+  'form.cycleStart':             'متى بدأت فترة الاستخدام الحالية',
+  'form.cycleStart.hint':        'بهذا التاريخ يعرف التطبيق إن كنتم حاليًا في فترة استخدام أو انقطاع، فيبقى عدد الأيام دقيقًا',
+
+  /* stock + alert threshold */
+  'form.currentBoxes':           'عدد العلب في المخزون',
+  'form.currentStock':           'عدد الوحدات في المخزون',
+  'form.currentStock.hint':      'يُحسب تلقائيًا من عدد العلب — عدِّلوه إذا كان مخزونكم الفعلي مختلفًا',
+  'form.alertDays':              'التنبيه المسبق قبل نفاد المخزون',
+  /* אפשרויות בורר עומדות בפני עצמן → מצב זוגי בנומינטיב (أسبوعان، شهران).
+     השוו ל-alert.days.* למטה, שנצרכות אחרי 'بمدة' ולכן בגניטיב. */
+  'form.alertDays.7':            'أسبوع',
+  'form.alertDays.14':           'أسبوعان',
+  'form.alertDays.21':           'ثلاثة أسابيع',
+  'form.alertDays.30':           'شهر',
+  'form.alertDays.60':           'شهران',
+  'form.alertDays.90':           'ثلاثة أشهر',
+  'form.alertDays.hint':         'سيصبح اختياركم الإعداد الافتراضي للأدوية التي تضيفونها لاحقًا',
+  'form.delete':                 'حذف الدواء',
+
+  /* stock update modal */
+  'receive.title':               'تحديث المخزون',
+  'receive.boxes':               'كم علبة جديدة وصلت؟',
+  'receive.boxes.placeholder':   'مثال: 2',
+
+  /* settings */
+  'settings.title':              'الإعدادات',
+  'settings.email':              'عنوان البريد الإلكتروني للطلبات',
+  'settings.email.change':       'تغيير العنوان',
+  'settings.email.add':          'إضافة عنوان',
+  'settings.notify':             'التنبيهات',
+  'settings.notify.background':  'في الخلفية أيضًا، عند الإمكان',
+  'settings.notify.onOpen':      'عند فتح التطبيق',
+  'settings.notify.off':         'معطَّلة',
+  'settings.backup':             'النسخ الاحتياطي والاستعادة',
+  'settings.backup.text':        'تُحفظ بياناتكم على هذا الجهاز فقط. النسخة الاحتياطية تتيح نقلها إلى جهاز آخر، أو استعادتها بعد تغيير الهاتف.',
+  'settings.backup.export':      'حفظ نسخة احتياطية في ملف',
+  'settings.backup.import':      'استعادة من ملف نسخة احتياطية',
+
+  /* email modal */
+  'email.address':               'عنوان البريد الإلكتروني',
+  'email.hint':                  'يُحفظ العنوان على هذا الجهاز حتى لا تضطروا إلى إدخاله مرة أخرى',
+
+  /* shared */
+  'common.cancel':               'إلغاء',
+  'common.save':                 'حفظ',
+  'common.close':                'إغلاق',
+
+  /* ===== app.js ===== */
+  /* ותירת הצריכה.
+     ⚠️ ארבעת המפתחות שבעברית/אנגלית הם תבנית עם {placeholder} הם כאן
+     פונקציות (freq.units, freq.timesWeekly, freq.cycle, order.sentAgo).
+     t() בודק את הטיפוס של הערך שנשלף בפועל, לכל שפה בנפרד, ולכן שפה אחת
+     יכולה להסתעף גם כשהאחרות לא. בערבית אין ברירה: '7 يوم' פשוט שגוי.
+
+     'في كل مرة' כי המפתח הזה מוצג רק במצב השבועי, שבו המספר הוא יחידות
+     לכל נטילה ולא ליום. צורה חופשית בתחילת השורה → נומינטיב (وحدتان). */
+  'freq.units': (v) => v.n === 1
+    ? 'وحدة واحدة في كل مرة'
+    : v.n === 2
+      ? 'وحدتان في كل مرة'
+      : (Number.isInteger(v.n) && v.n >= 3 && v.n <= 10)
+        ? `${v.n} وحدات في كل مرة`
+        : `${v.n} وحدة في كل مرة`,
+  'freq.onceWeekly':           'مرة في الأسبوع',
+  /* 'מרתין' ולא 'מרתאן': זה תואר פועל (אקוזטיב), לא נושא. */
+  'freq.timesWeekly': (v) => v.n === 1
+    ? 'مرة واحدة في الأسبوع'
+    : v.n === 2
+      ? 'مرتين في الأسبوع'
+      : (Number.isInteger(v.n) && v.n >= 3 && v.n <= 10)
+        ? `${v.n} مرات في الأسبوع`
+        : `${v.n} مرة في الأسبوع`,
+  /* שני המספרים מסתעפים, ולכן ספירת הימים יושבת בעוזר מקומי אחד בתוך
+     הפונקציה — אין דרך להגדיר עוזר מחוץ לאובייקט בקובץ הזה.
+     סדר המילים התהפך מול המקור: 'استخدام 7 أيام' ולא '7 أيام استخدام',
+     אחרת היחיד יוצא 'يوم واحد استخدام' — סמיכות עקומה. אחרי שם הפעולה
+     المدة באקוזטיב, וזו בדיוק הצורה שהעוזר מחזיר. */
+  'freq.cycle': (v) => {
+    const days = (n) => n === 1
+      ? 'يوم واحد'
+      : n === 2
+        ? 'يومين'
+        : (Number.isInteger(n) && n >= 3 && n <= 10)
+          ? `${n} أيام`
+          : `${n} يومًا`;
+    return `دورات · استخدام ${days(v.on)}، انقطاع ${days(v.off)}`;
+  },
+  'freq.daily':                '{n} في اليوم',
+  'freq.chipTaking':           '▶ في فترة استخدام · انقطاع من {date}',
+  'freq.chipPause':            '⏸ في فترة انقطاع · عودة إلى الاستخدام في {date}',
+
+  /* סף ההתראה
+     הערכים האלה נכנסים תמיד לתוך 'alert.before' אחרי 'بمدة', שדורש
+     גניטיב — ולכן أسبوعين/شهرين ולא أسبوعان/شهران. */
+  'alert.days.7':              'أسبوع',
+  'alert.days.14':             'أسبوعين',
+  'alert.days.21':             'ثلاثة أسابيع',
+  'alert.days.30':             'شهر',
+  'alert.days.60':             'شهرين',
+  'alert.days.90':             'ثلاثة أشهر',
+  'alert.days.other': (v) => v.n === 1
+    ? 'يوم واحد'
+    : v.n === 2
+      ? 'يومين'
+      : (Number.isInteger(v.n) && v.n >= 3 && v.n <= 10)
+        ? `${v.n} أيام`
+        : `${v.n} يومًا`,
+  /* סדר המילים שונה מהמקור: בערבית מילת היחס נצמדת לתקופה ולכן התקופה
+     עוברת לסוף המשפט. */
+  'alert.before':              'تنبيه قبل النفاد بمدة {period}',
+
+  /* כרטיס התרופה
+     v.n כאן יכול להיות שבר (المخزون מעוגל לשתי ספרות, והקופסאות לאחת),
+     ולכן ענף 3–10 מותנה ב-Number.isInteger: '2.5 وحدة' נכון, '2.5 وحدات' לא.
+     גם 0 נופל בכוונה לענף האחרון — '0 وحدة' ולא '0 وحدات'. */
+  'card.stockNow': (v) => v.n === 1
+    ? 'المخزون الحالي: وحدة واحدة'
+    : v.n === 2
+      ? 'المخزون الحالي: وحدتان'
+      : (Number.isInteger(v.n) && v.n >= 3 && v.n <= 10)
+        ? `المخزون الحالي: ${v.n} وحدات`
+        : `المخزون الحالي: ${v.n} وحدة`,
+  /* 'نحو' גורר גניטיב, ולכן המצב הזוגי הוא علبتين ולא علبتان. */
+  'card.approxBoxes': (v) => v.n === 1
+    ? '(نحو علبة واحدة)'
+    : v.n === 2
+      ? '(نحو علبتين)'
+      : (Number.isInteger(v.n) && v.n >= 3 && v.n <= 10)
+        ? `(نحو ${v.n} علب)`
+        : `(نحو ${v.n} علبة)`,
+  'card.receive':              'وصل الطلب — تحديث المخزون',
+  'card.perBoxHint':           'كل علبة = {n} وحدة',
+
+  /* דורש הזמנה — תכנון הכמות
+     התחילית מסתיימת ב-'لمدة' שגורר גניטיב, ולכן order.months.2 הוא شهرين.
+     הסיומת 'مقدمًا' נבחרה כי היא תואר פועל שאינו נוטה — כל נטייה (قادم /
+     قادمين / قادمة) הייתה משתנה לפי הבחירה בבורר ואי אפשר להתאים אותה. */
+  'order.months.1':            'شهر',
+  'order.months.2':            'شهرين',
+  'order.months.3':            '3 أشهر',
+  'order.planPrefix':          'اطلبوا مخزونًا يكفي لمدة',
+  'order.planSuffix':          'مقدمًا',
+  'order.qtyWithBoxes':        'الكمية المطلوبة: {boxes} (نحو {pills} وحدة)',
+  'order.qtyUnitsOnly':        'الكمية المطلوبة: نحو {pills} وحدة',
+  'order.inListRemove':        '✓ في قائمة الطلبات — إزالة',
+  'order.add':                 '+ إضافة إلى الطلب',
+  'order.sentToday':           'أُرسل اليوم',
+  'order.sentYesterday':       'أُرسل أمس',
+  /* 'قبل' גורר גניטיב, ולכן המצב הזוגי הוא يومين. מ-11 ומעלה המנוי חוזר
+     ליחיד באקוזטיב (قبل 30 يومًا) — כך זה בכל מקרה, בלי קשר ליחסת המספר. */
+  'order.sentAgo': (v) => v.days === 1
+    ? 'أُرسل قبل يوم واحد'
+    : v.days === 2
+      ? 'أُرسل قبل يومين'
+      : (Number.isInteger(v.days) && v.days >= 3 && v.days <= 10)
+        ? `أُرسل قبل ${v.days} أيام`
+        : `أُرسل قبل ${v.days} يومًا`,
+
+  /* רשימת ההזמנות */
+  'cart.qtyWithBoxes':         '{boxes} للطلب (نحو {pills} وحدة)',
+  'cart.qtyUnitsOnly':         'نحو {pills} وحدة للطلب',
+  'cart.receive':              'وصل الطلب — تحديث المخزون',
+  'cart.removeAria':           'إزالة من قائمة الطلبات',
+
+  /* משותף */
+  'common.ok':                 'موافق',
+  'common.change':             'تغيير',
+  'common.addMed':             'إضافة دواء',
+  'common.editMed':            'تعديل الدواء',
+  'common.chooseDose':         'اختاروا التركيز...',
+  'common.doseOther':          'آخر (إدخال يدوي)',
+  /* מופיע גם לבדו (גוף המייל) וגם אחרי נקודתיים, ולכן נומינטיב: علبتان. */
+  'common.boxes': (v) => v.n === 1
+    ? 'علبة واحدة'
+    : v.n === 2
+      ? 'علبتان'
+      : (Number.isInteger(v.n) && v.n >= 3 && v.n <= 10)
+        ? `${v.n} علب`
+        : `${v.n} علبة`,
+  /* 'نحو' גורר גניטיב → وحدتين. */
+  'common.approxUnits': (v) => v.n === 1
+    ? 'نحو وحدة واحدة'
+    : v.n === 2
+      ? 'نحو وحدتين'
+      : (Number.isInteger(v.n) && v.n >= 3 && v.n <= 10)
+        ? `نحو ${v.n} وحدات`
+        : `نحو ${v.n} وحدة`,
+
+  /* בדיקת הטופס */
+  'validation.name':           'أدخلوا اسمًا',
+  'validation.positive':       'أدخلوا رقمًا أكبر من صفر',
+  'validation.number':         'أدخلوا رقمًا',
+
+  /* הודעות קצרות */
+  'toast.medAdded':            'تمت إضافة الدواء',
+  'toast.medUpdated':          'تم تحديث الدواء',
+  'toast.medDeleted':          'تم حذف الدواء',
+  'toast.addedToOrder':        'أُضيف إلى قائمة الطلبات',
+  'toast.removedFromOrder':    'أُزيل من قائمة الطلبات',
+  'toast.stockUpdated':        'تم تحديث المخزون',
+  'toast.mailOpened':          'تم فتح رسالة إلى {email}',
+  'toast.emailUpdated':        'تم تحديث عنوان البريد الإلكتروني',
+  'toast.notifyOn':            'التنبيهات مشغَّلة',
+  'toast.notifyOff':           'التنبيهات معطَّلة',
+  'toast.notifyBlocked':       'التنبيهات محجوبة في إعدادات الجهاز',
+  'toast.settingSaved':        'تم حفظ الإعداد',
+  'toast.backupSaved':         'تم حفظ النسخة الاحتياطية',
+  'toast.backupFailed':        'فشل حفظ النسخة الاحتياطية',
+  'toast.backupInvalid':       'هذا الملف ليس نسخة احتياطية صالحة',
+  'toast.backupNotOurs':       'هذا الملف ليس نسخة احتياطية من Supplever',
+  /* 'استعادة' גורר גניטיב → دواءين. */
+  'toast.restored': (v) => v.n === 1
+    ? 'تمت استعادة دواء واحد'
+    : v.n === 2
+      ? 'تمت استعادة دواءين'
+      : (Number.isInteger(v.n) && v.n >= 3 && v.n <= 10)
+        ? `تمت استعادة ${v.n} أدوية`
+        : `تمت استعادة ${v.n} دواءً`,
+
+  /* חלונות אישור */
+  'confirm.deleteMed.title':   'حذف الدواء',
+  'confirm.deleteMed.text':    'هل تريدون حذف هذا الدواء؟',
+  'confirm.deleteMed.ok':      'حذف',
+  'confirm.restore.title':     'الاستعادة من نسخة احتياطية',
+  'confirm.restore.replace':   'النسخة الاحتياطية تحتوي على {inBackup}. الاستعادة ستستبدل {inApp} حاليًا في التطبيق، ولا يمكن التراجع عنها.',
+  'confirm.restore.empty':     'هل تريدون استعادة {inBackup} من النسخة الاحتياطية؟',
+  'confirm.restore.ok':        'استعادة',
+
+  /* גיבוי ושחזור
+     backup.medCount נצרך תמיד אחרי 'على' או 'استعادة' (גניטיב) → دواءين.
+     backup.inApp נושא את התואר בתוכו, כמו בעברית, כי התאמת 'الموجود'
+     תלויה במספר; הוא מושא של 'ستستبدل' ולכן אקוזטיב (الدواءين الموجودين). */
+  'backup.medCount': (v) => v.n === 1
+    ? 'دواء واحد'
+    : v.n === 2
+      ? 'دواءين'
+      : (Number.isInteger(v.n) && v.n >= 3 && v.n <= 10)
+        ? `${v.n} أدوية`
+        : `${v.n} دواءً`,
+  'backup.inApp': (v) => v.n === 1
+    ? 'الدواء الموجود'
+    : v.n === 2
+      ? 'الدواءين الموجودين'
+      : `الأدوية الـ${v.n} الموجودة`,
+
+  /* התראות מערכת */
+  'notification.reorderTitle': '{name} — يُنصح بطلبه',
+  'notification.reorderBody':  'افتحوا Supplever لإضافته إلى قائمة الطلبات',
+  'notification.singleBody':   'يُنصح بالطلب قريبًا — افتحوا Supplever',
+  /* 'بحاجة إلى طلب' הוא צירוף יחס שאינו נוטה, ולכן ההתאמה היחידה שנדרשת
+     היא בשם העצם: دواء واحد / دواءان (זוגי בנומינטיב, נושא) / أدوية / دواءً. */
+  'notification.multiTitle': (v) => v.n === 1
+    ? 'دواء واحد بحاجة إلى طلب'
+    : v.n === 2
+      ? 'دواءان بحاجة إلى طلب'
+      : (Number.isInteger(v.n) && v.n >= 3 && v.n <= 10)
+        ? `${v.n} أدوية بحاجة إلى طلب`
+        : `${v.n} دواءً بحاجة إلى طلب`,
+  'notification.bgNativeTitle': 'حتى عندما يكون التطبيق مغلقًا',
+
+  /* מייל ההזמנה */
+  'email.subject':             'قائمة طلب الأدوية - Supplever',
+  'email.greeting':            'تحية طيبة،',
+  'email.intro':               'قائمة الطلبات الحالية لديّ هي:',
+  'email.signature':           'أُرسلت من Supplever',
+  'email.doseLabel':           'التركيز:',
+  'email.qtyLabel':            'الكمية:',
+  'email.willSendTo':          'ستُرسل القائمة إلى {email}',
+  'email.sendTitle':           'إلى أين نرسل القائمة؟',
+  'email.sendBtn':             'حفظ وإرسال',
+  'email.editTitle':           'تحديث عنوان البريد الإلكتروني',
+  'email.editBtn':             'حفظ',
+  },
+
+  /* ⚠️ רוסית — טרם עברה ביקורת של דובר שפת אם. מוסתרת מהבורר
+     ב-index.html עד שתאושר. ראו ruPlural למעלה. */
+  ru: {
+  /* заголовок */
+  'app.tagline':        'Всегда на шаг впереди — запас не кончится внезапно',
+  'a11y.settings':      'Настройки',
+  'a11y.language':      'Язык приложения',
+
+  /* вкладки */
+  'tabs.stock':         'Мой запас',
+  'tabs.orders':        'Нужно заказать',
+  'tabs.cart':          'Список заказа',
+
+  /* баннер оповещений */
+  'notify.banner':      'Включите оповещения, чтобы сразу при открытии приложения видеть, что пора заказать',
+  'notify.enable':      'Включить оповещения',
+  'notify.later':       'Не сейчас',
+
+  /* пустые экраны */
+  'empty.stock.title':  'Лекарств пока нет',
+  'empty.stock.text':   'Нажмите «Добавить лекарство», чтобы начать следить за запасом',
+  'empty.orders.title': 'Всё в порядке',
+  'empty.orders.text':  'Сейчас заказывать ничего не нужно',
+  'empty.cart.title':   'Список заказа пуст',
+  'empty.cart.text':    'Нажмите «Добавить в заказ» в разделе «Нужно заказать», чтобы собрать список',
+
+  /* заказы в пути */
+  'orders.onTheWay.title': 'Заказы в пути',
+  'orders.onTheWay.text': (v) => {
+    const head = v.n === 1
+      ? 'Одно лекарство'
+      : `${v.n} ${ruPlural(v.n, 'лекарство', 'лекарства', 'лекарств')}`;
+    const verb = ruPlural(v.n, 'заказано и ждёт', 'заказаны и ждут', 'заказаны и ждут');
+    const tail = ruPlural(v.n, 'оно придёт', 'они придут', 'они придут');
+    return `${head} ${verb} в «Списке заказа» — обновите запас, когда ${tail}`;
+  },
+
+  /* сколько дней осталось */
+  'days.none':          'Запас закончился',
+  'days.left': (v) => `${ruPlural(v.n, 'Остался', 'Осталось', 'Осталось')} ${v.n} ${ruPlural(v.n, 'день', 'дня', 'дней')}`,
+
+  /* главные кнопки */
+  'fab.add':            '+ Добавить лекарство',
+  'footer.privacy':     'Политика конфиденциальности',
+
+  /* ===== index.html ===== */
+  /* document title */
+  'app.title':                   'Supplever — мой запас',
+
+  /* section labels */
+  'orders.label.pending':        'Ещё не в списке заказа',
+  'orders.label.added':          'Уже в списке заказа',
+  'cart.label.pending':          'Заказ ещё не отправлен',
+  'cart.label.sent':             'Заказ уже отправлен',
+  'cart.send':                   'Отправить список заказа',
+
+  /* add / edit medicine form */
+  'form.name':                   'Название лекарства',
+  'form.name.placeholder':       'например, Omeprazole',
+  'form.dose':                   'Дозировка (необязательно)',
+  'form.dose.placeholder':       'например, 20 mg',
+  'form.pillsPerBox':            'Единиц в упаковке',
+
+  /* insulin pen helper */
+  'form.pen.title':              'Обнаружена инсулиновая ручка — посчитаем общее число единиц в упаковке',
+  'form.pen.pensPerBox':         'Ручек в упаковке',
+  'form.pen.unitsPerPen':        'Единиц в одной ручке',
+  'form.pen.hint':               'Поле «Единиц в упаковке» ниже заполнится автоматически — измените числа, если концентрация другая',
+
+  /* frequency */
+  'form.freq':                   'Как часто принимается',
+  'form.freq.daily':             'Каждый день',
+  'form.freq.weekly':            'Несколько раз в неделю',
+  'form.freq.cycle':             'Циклами — период приёма, затем перерыв',
+  'form.dailyRate':              'Единиц в день',
+  'form.weeklyRate':             'Единиц за один раз',
+  'form.timesPerWeek':           'Раз в неделю',
+  'form.timesPerWeek.1':         'Один раз',
+  'form.timesPerWeek.2':         'Два раза',
+  'form.timesPerWeek.3':         '3 раза',
+  'form.timesPerWeek.4':         '4 раза',
+  'form.timesPerWeek.5':         '5 раз',
+  'form.timesPerWeek.6':         '6 раз',
+  'form.cycle.presetMonth':      'Месяц приёма / месяц перерыва',
+  'form.cycle.presetWeek':       'Неделя приёма / неделя перерыва',
+  'form.cycleRate':              'Единиц в день (в дни приёма)',
+  'form.cycleOnDays':            'Дней приёма',
+  'form.cycleOffDays':           'Дней перерыва',
+  'form.cycleStart':             'Когда начался текущий период приёма',
+  'form.cycleStart.hint':        'По этой дате приложение понимает, идёт сейчас период приёма или перерыв, и считает дни точно',
+
+  /* stock + alert threshold */
+  'form.currentBoxes':           'Упаковок в запасе',
+  'form.currentStock':           'Единиц в запасе',
+  'form.currentStock.hint':      'Считается автоматически по числу упаковок — измените, если фактический запас другой',
+  'form.alertDays':              'За сколько времени предупредить',
+  'form.alertDays.7':            'Неделя',
+  'form.alertDays.14':           'Две недели',
+  'form.alertDays.21':           'Три недели',
+  'form.alertDays.30':           'Месяц',
+  'form.alertDays.60':           'Два месяца',
+  'form.alertDays.90':           'Три месяца',
+  'form.alertDays.hint':         'Этот выбор станет значением по умолчанию для следующих лекарств',
+  'form.delete':                 'Удалить лекарство',
+
+  /* stock update modal */
+  'receive.title':               'Обновление запаса',
+  'receive.boxes':               'Сколько новых упаковок получено?',
+  'receive.boxes.placeholder':   'например, 2',
+
+  /* settings */
+  'settings.title':              'Настройки',
+  'settings.email':              'Адрес email для заказов',
+  'settings.email.change':       'Изменить адрес',
+  'settings.email.add':          'Добавить адрес',
+  'settings.notify':             'Оповещения',
+  'settings.notify.background':  'Также в фоне, когда возможно',
+  'settings.notify.onOpen':      'При открытии приложения',
+  'settings.notify.off':         'Выключены',
+  'settings.backup':             'Резервная копия и восстановление',
+  'settings.backup.text':        'Данные хранятся только на этом устройстве. Резервная копия позволяет перенести их на другое устройство или восстановить после смены телефона.',
+  'settings.backup.export':      'Сохранить копию в файл',
+  'settings.backup.import':      'Восстановить из файла копии',
+
+  /* email modal */
+  'email.address':               'Адрес email',
+  'email.hint':                  'Адрес сохранится на этом устройстве, чтобы не вводить его снова',
+
+  /* shared */
+  'common.cancel':               'Отмена',
+  'common.save':                 'Сохранить',
+  'common.close':                'Закрыть',
+
+  /* ===== app.js ===== */
+  /* как часто принимается */
+  'freq.units':                '{n} ед.',
+  'freq.onceWeekly':           'раз в неделю',
+  'freq.timesWeekly': (v) => `${v.n} ${ruPlural(v.n, 'раз', 'раза', 'раз')} в неделю`,
+  'freq.cycle':                'циклами · приём {on} дн., перерыв {off} дн.',
+  'freq.daily':                '{n} ед. в день',
+  'freq.chipTaking':           '▶ Приём · перерыв с {date}',
+  'freq.chipPause':            '⏸ Перерыв · приём с {date}',
+
+  /* порог оповещения — формы винительного падежа, подставляются в alert.before */
+  'alert.days.7':              'неделю',
+  'alert.days.14':             'две недели',
+  'alert.days.21':             'три недели',
+  'alert.days.30':             'месяц',
+  'alert.days.60':             'два месяца',
+  'alert.days.90':             'три месяца',
+  'alert.days.other': (v) => `${v.n} ${ruPlural(v.n, 'день', 'дня', 'дней')}`,
+  'alert.before':              'оповещение за {period} до конца запаса',
+
+  /* карточка лекарства */
+  'card.stockNow': (v) => `Запас сейчас: ${v.n} ${ruPlural(v.n, 'единица', 'единицы', 'единиц')}`,
+  'card.approxBoxes': (v) => `(примерно ${v.n} ${ruPlural(v.n, 'упаковка', 'упаковки', 'упаковок')})`,
+  'card.receive':              'Заказ получен — обновить запас',
+  'card.perBoxHint':           'упаковка = {n} ед.',
+
+  /* нужно заказать — планирование количества */
+  'order.months.1':            '1 месяц',
+  'order.months.2':            '2 месяца',
+  'order.months.3':            '3 месяца',
+  'order.planPrefix':          'Заказать запас на',
+  'order.planSuffix':          'вперёд',
+  'order.qtyWithBoxes':        'К заказу: {boxes} (примерно {pills} ед.)',
+  'order.qtyUnitsOnly':        'К заказу: примерно {pills} ед.',
+  'order.inListRemove':        '✓ В списке заказа — убрать',
+  'order.add':                 '+ Добавить в заказ',
+  'order.sentToday':           'Отправлено сегодня',
+  'order.sentYesterday':       'Отправлено вчера',
+  'order.sentAgo':             'Отправлено {days} дн. назад',
+
+  /* список заказа */
+  'cart.qtyWithBoxes':         '{boxes} к заказу (примерно {pills} ед.)',
+  'cart.qtyUnitsOnly':         'примерно {pills} ед. к заказу',
+  'cart.receive':              'Заказ пришёл — обновить запас',
+  'cart.removeAria':           'Убрать из списка заказа',
+
+  /* общее */
+  'common.ok':                 'ОК',
+  'common.change':             'Изменить',
+  'common.addMed':             'Добавить лекарство',
+  'common.editMed':            'Изменить лекарство',
+  'common.chooseDose':         'Выберите дозировку...',
+  'common.doseOther':          'Другая (ввести вручную)',
+  'common.boxes': (v) => `${v.n} ${ruPlural(v.n, 'упаковка', 'упаковки', 'упаковок')}`,
+  'common.approxUnits': (v) => `примерно ${v.n} ${ruPlural(v.n, 'единица', 'единицы', 'единиц')}`,
+
+  /* проверка формы */
+  'validation.name':           'Введите название',
+  'validation.positive':       'Введите число больше нуля',
+  'validation.number':         'Введите число',
+
+  /* короткие сообщения */
+  'toast.medAdded':            'Лекарство добавлено',
+  'toast.medUpdated':          'Лекарство обновлено',
+  'toast.medDeleted':          'Лекарство удалено',
+  'toast.addedToOrder':        'Добавлено в список заказа',
+  'toast.removedFromOrder':    'Убрано из списка заказа',
+  'toast.stockUpdated':        'Запас обновлён',
+  'toast.mailOpened':          'Открыто письмо на {email}',
+  'toast.emailUpdated':        'Адрес email обновлён',
+  'toast.notifyOn':            'Оповещения включены',
+  'toast.notifyOff':           'Оповещения выключены',
+  'toast.notifyBlocked':       'Оповещения заблокированы в настройках устройства',
+  'toast.settingSaved':        'Настройка сохранена',
+  'toast.backupSaved':         'Резервная копия сохранена',
+  'toast.backupFailed':        'Не удалось сохранить копию',
+  'toast.backupInvalid':       'Это не корректный файл резервной копии',
+  'toast.backupNotOurs':       'Это не файл резервной копии Supplever',
+  'toast.restored': (v) => `Восстановлено ${v.n} ${ruPlural(v.n, 'лекарство', 'лекарства', 'лекарств')}`,
+
+  /* окна подтверждения */
+  'confirm.deleteMed.title':   'Удаление лекарства',
+  'confirm.deleteMed.text':    'Удалить это лекарство?',
+  'confirm.deleteMed.ok':      'Удалить',
+  'confirm.restore.title':     'Восстановление из копии',
+  'confirm.restore.replace':   'В резервной копии {inBackup}. Восстановление заменит {inApp} в приложении, и отменить это нельзя.',
+  'confirm.restore.empty':     'Восстановить {inBackup} из резервной копии?',
+  'confirm.restore.ok':        'Восстановить',
+
+  /* резервная копия и восстановление */
+  'backup.medCount': (v) => `${v.n} ${ruPlural(v.n, 'лекарство', 'лекарства', 'лекарств')}`,
+  'backup.inApp': (v) => v.n === 1
+    ? 'лекарство'
+    : `${v.n} ${ruPlural(v.n, 'лекарство', 'лекарства', 'лекарств')}`,
+
+  /* системные оповещения */
+  'notification.reorderTitle': '{name} — пора заказать',
+  'notification.reorderBody':  'Откройте Supplever, чтобы добавить в список заказа',
+  'notification.singleBody':   'Стоит заказать в ближайшее время — откройте Supplever',
+  'notification.multiTitle': (v) => `Нужно заказать ${v.n} ${ruPlural(v.n, 'лекарство', 'лекарства', 'лекарств')}`,
+  'notification.bgNativeTitle': 'Даже когда приложение закрыто',
+
+  /* письмо с заказом */
+  'email.subject':             'Список заказа лекарств - Supplever',
+  'email.greeting':            'Здравствуйте,',
+  'email.intro':               'Вот мой текущий список заказа:',
+  'email.signature':           'Отправлено из Supplever',
+  'email.doseLabel':           'Дозировка:',
+  'email.qtyLabel':            'Количество:',
+  'email.willSendTo':          'Список будет отправлен на {email}',
+  'email.sendTitle':           'Куда отправить список?',
+  'email.sendBtn':             'Сохранить и отправить',
+  'email.editTitle':           'Изменение адреса email',
+  'email.editBtn':             'Сохранить',
   },
 };
 

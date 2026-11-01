@@ -95,6 +95,30 @@ const NOTIFY_STRINGS = {
     titleMany: (n) => `${n} medicines need reordering`,
     bodyOne: 'Open Supplever to add it to your order list',
   },
+  /* ⚠️ `titleMany` מסתעף כאן לפי אותם כללי ריבוי שב-i18n.js, ובערבית
+     וברוסית הם אינם "יחיד מול רבים". אם משנים שם את הנוסח — לשנות גם כאן;
+     אין שום מנגנון שיתפוס פער בין השניים. */
+  ar: {
+    titleOne: (name) => `${name} — يُنصح بطلبه`,
+    // יחיד · זוגי · 3-10 · 11+
+    titleMany: (n) => n === 2 ? 'دواءان بحاجة إلى طلب'
+      : (Number.isInteger(n) && n >= 3 && n <= 10)
+        ? `${n} أدوية بحاجة إلى طلب`
+        : `${n} دواءً بحاجة إلى طلب`,
+    bodyOne: 'افتحوا Supplever لإضافته إلى قائمة الطلبات',
+  },
+  ru: {
+    titleOne: (name) => `${name} — пора заказать`,
+    // 1 · 2-4 · 5+, כולל החריג 11-14
+    titleMany: (n) => {
+      const d10 = n % 10, d100 = n % 100;
+      const word = (d10 === 1 && d100 !== 11) ? 'лекарство'
+        : (d10 >= 2 && d10 <= 4 && (d100 < 12 || d100 > 14)) ? 'лекарства'
+        : 'лекарств';
+      return `Нужно заказать ${n} ${word}`;
+    },
+    bodyOne: 'Откройте Supplever, чтобы добавить в список заказов',
+  },
 };
 
 async function checkStockInBackground() {
