@@ -716,7 +716,11 @@ function openChoiceDialog(select) {
   choiceTarget = select;
   choiceSheet.innerHTML = '';
 
-  Array.from(select.options).forEach((opt) => {
+  /* ⚠️ מדלגים על option מוסתר. ב-<select> של המערכת הדפדפן עושה זאת לבד,
+     ומכיוון שאנחנו מציירים את הרשימה בעצמנו — צריך לכבד את זה כאן במפורש,
+     אחרת אפשרות שהוסתרה בכוונה תופיע בכל זאת. כך מוסתרות כרגע השפות
+     שטרם עברו ביקורת, בלי להוציא אותן מה-DOM. */
+  Array.from(select.options).filter((opt) => !opt.hidden).forEach((opt) => {
     const item = document.createElement('button');
     item.type = 'button';
     item.className = 'choice-item' + (opt.value === select.value ? ' selected' : '');

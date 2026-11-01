@@ -68,9 +68,14 @@
        `data-choice="1"` מונע מ-enhanceSelects לעטוף אותו בעטיפה נראית. -->
   <select id="langSelect" data-choice="1" hidden>
     <option value="he">עברית</option>
-    <option value="ar">العربية</option>
+    <!-- ⚠️ ערבית ורוסית מתורגמות אך **טרם עברו ביקורת של דובר שפת אם**,
+         ולכן הן מוסתרות מהבורר (openChoiceDialog מדלג על option מוסתר).
+         להסרת ה-hidden אחרי שהתרגום יאושר — זה כל מה שנדרש.
+         ⚠️ להשאיר את ה-option עצמו בדף: LANG_DIR עדיין מכיר בשתיהן, ומשתמש
+         ששמר אחת מהן קודם לכן ימשיך לראות אותה, ו-langSelect.value יעבוד. -->
+    <option value="ar" hidden>العربية</option>
     <option value="en">English</option>
-    <option value="ru">Русский</option>
+    <option value="ru" hidden>Русский</option>
   </select>
 </header>
 
