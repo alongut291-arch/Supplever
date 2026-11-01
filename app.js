@@ -174,13 +174,13 @@ function freqText(med) {
   const mode = freqMode(med);
   if (mode === 'weekly') {
     const times = med.timesPerWeek || 1;
-    const pills = med.dailyRate === 1 ? '' : `${med.dailyRate} יחידות · `;
-    return pills + (times === 1 ? 'פעם בשבוע' : `${times} פעמים בשבוע`);
+    const pills = med.dailyRate === 1 ? '' : `${t('freq.units', { n: med.dailyRate })} · `;
+    return pills + (times === 1 ? t('freq.onceWeekly') : t('freq.timesWeekly', { n: times }));
   }
   if (mode === 'cycle') {
-    return `מחזורי · ${med.cycleOnDays} יום נוטלים, ${med.cycleOffDays} יום הפסקה`;
+    return t('freq.cycle', { on: med.cycleOnDays, off: med.cycleOffDays });
   }
-  return `${med.dailyRate} ליום`;
+  return t('freq.daily', { n: med.dailyRate });
 }
 
 /* התגית בכרטיס: בנטילה או בהפסקה, ומתי המצב מתחלף */
@@ -191,10 +191,10 @@ function cycleChipHTML(med) {
   const now = startOfToday();
   if (pos.isTaking) {
     const pauseAt = addDays(now, pos.on - pos.idx);
-    return `<span class="cycle-chip active">▶ בנטילה · הפסקה מ-${formatShortDate(pauseAt)}</span>`;
+    return `<span class="cycle-chip active">${t('freq.chipTaking', { date: formatShortDate(pauseAt) })}</span>`;
   }
   const backAt = addDays(now, pos.len - pos.idx);
-  return `<span class="cycle-chip pause">⏸ בהפסקה · חוזרים לנטילה ב-${formatShortDate(backAt)}</span>`;
+  return `<span class="cycle-chip pause">${t('freq.chipPause', { date: formatShortDate(backAt) })}</span>`;
 }
 
 /* ⚠️ שתי המספרים כאן **צמוד ל-stockFillPercent**, ואסור לשנות אחד בלי השני.
@@ -231,9 +231,8 @@ function stockFillPercent(med) {
 function formatDays(days) {
   if (days === Infinity) return '—';
   const rounded = Math.round(days);
-  if (rounded <= 0) return 'אזל המלאי';
-  if (rounded === 1) return 'יום אחד נותר';
-  return `${rounded} ימים נותרו`;
+  if (rounded <= 0) return t('days.none');
+  return t('days.left', { n: rounded });
 }
 
 const DOSE_UNIT_REPLACEMENTS = [
@@ -245,18 +244,22 @@ const DOSE_UNIT_REPLACEMENTS = [
   [/(\d)\s*g\b/gi, '$1 גרם'],
 ];
 
+/* ⚠️ ההמרה הזו הופכת יחידות אנגליות ל**עברית**, ולכן היא שייכת לעברית בלבד.
+   במצב אנגלית מה שהמשתמש הקליד נשמר כפי שהוא — אחרת היינו כותבים עברית
+   לתוך הנתונים של משתמש שבחר אנגלית, וזה גם לא היה מתהפך חזרה. */
 function normalizeDoseUnits(dose) {
   if (!dose) return dose;
+  if (activeLang() !== 'he') return dose;
   return DOSE_UNIT_REPLACEMENTS.reduce((str, [pattern, replacement]) => str.replace(pattern, replacement), dose);
 }
 
-const ALERT_DAYS_LABELS = {
-  7: 'שבוע', 14: 'שבועיים', 21: 'שלושה שבועות',
-  30: 'חודש', 60: 'חודשיים', 90: 'שלושה חודשים',
-};
+/* ששת הערכים שהטופס מציע. מי שלא בהם הוא ערך שנשמר פעם ואינו ברשימה. */
+const ALERT_DAYS_OPTIONS = [7, 14, 21, 30, 60, 90];
 
 function formatAlertDays(alertDays) {
-  return ALERT_DAYS_LABELS[alertDays] || `${alertDays} ימים`;
+  return ALERT_DAYS_OPTIONS.includes(alertDays)
+    ? t(`alert.days.${alertDays}`)
+    : t('alert.days.other', { n: alertDays });
 }
 
 /* אות שימוש נצמדת למילה — "משבועיים", לא "מ-שבועיים". לפני ספרה היא דווקא
@@ -265,6 +268,12 @@ function formatAlertDays(alertDays) {
 function alertDaysFrom(alertDays) {
   const label = formatAlertDays(alertDays);
   return /^\d/.test(label) ? `מ-${label}` : `מ${label}`;
+}
+
+/* הדקדוק של alertDaysFrom קיים בעברית בלבד — באנגלית אין אות שימוש להצמיד,
+   והתקופה נכנסת כמות שהיא לתוך התבנית של t('alert.before'). */
+function alertPeriod(alertDays) {
+  return activeLang() === 'he' ? alertDaysFrom(alertDays) : formatAlertDays(alertDays);
 }
 
 /* ---------- rendering ---------- */
@@ -305,7 +314,7 @@ function medCardHTML(med, extraHTML = '', showReceiveBtn = true) {
           <span class="status-dot status-${status}"></span>
           <div>
             <p class="med-name" dir="auto">${escapeHtml(med.name)}</p>
-            <p class="med-dose">${escapeHtml(med.dose || '')}${med.dose ? ' · ' : ''}${freqText(med)}</p>
+            <p class="med-dose">${escapeHtml(localizeDose(med.dose || ''))}${med.dose ? ' · ' : ''}${freqText(med)}</p>
             ${cycleChipHTML(med)}
           </div>
         </div>
@@ -314,16 +323,15 @@ function medCardHTML(med, extraHTML = '', showReceiveBtn = true) {
       <div class="stock-bar">
         <div class="stock-bar-fill ${status}" style="width:${fill}%"></div>
       </div>
-      <p class="med-hint">מלאי נוכחי: ${stock} יחידות${med.pillsPerBox ? ` (כ-${Math.round((stock / med.pillsPerBox) * 10) / 10} קופסאות)` : ''} · התראה ${alertDaysFrom(med.alertDays)} לפני הסוף</p>
+      <p class="med-hint">${t('card.stockNow', { n: stock })}${med.pillsPerBox ? ` ${t('card.approxBoxes', { n: Math.round((stock / med.pillsPerBox) * 10) / 10 })}` : ''} · ${t('alert.before', { period: alertPeriod(med.alertDays) })}</p>
       ${extraHTML}
-      ${showReceiveBtn ? `<button class="received-btn" data-action="receive" data-id="${med.id}">קיבלתי הזמנה — עדכן מלאי</button>` : ''}
+      ${showReceiveBtn ? `<button class="received-btn" data-action="receive" data-id="${med.id}">${t('card.receive')}</button>` : ''}
     </div>
   `;
 }
 
 /* ---------- order quantity planning ---------- */
 
-const ORDER_MONTHS_LABELS = { 1: 'חודש', 2: 'חודשיים', 3: '3 חודשים' };
 const orderMonthsByMedId = {};
 
 function calcOrderSuggestion(med, months) {
@@ -334,7 +342,7 @@ function calcOrderSuggestion(med, months) {
 }
 
 function boxesLabel(neededBoxes) {
-  return neededBoxes === 1 ? 'קופסה אחת' : `${neededBoxes} קופסאות`;
+  return t('common.boxes', { n: neededBoxes });
 }
 
 function orderPlanningHTML(med) {
@@ -342,14 +350,14 @@ function orderPlanningHTML(med) {
   const { neededPills, neededBoxes } = calcOrderSuggestion(med, months);
 
   const optionsHTML = [1, 2, 3].map(m =>
-    `<option value="${m}" ${m === months ? 'selected' : ''}>${ORDER_MONTHS_LABELS[m]}</option>`
+    `<option value="${m}" ${m === months ? 'selected' : ''}>${t(`order.months.${m}`)}</option>`
   ).join('');
 
   const resultText = neededBoxes !== null
-    ? `כמות להזמנה: ${boxesLabel(neededBoxes)} (כ-${neededPills} יחידות)`
-    : `כמות להזמנה: כ-${neededPills} יחידות`;
+    ? t('order.qtyWithBoxes', { boxes: boxesLabel(neededBoxes), pills: neededPills })
+    : t('order.qtyUnitsOnly', { pills: neededPills });
 
-  const toggleLabel = med.inOrder ? '✓ ברשימת ההזמנות — הסר' : '+ הוסף להזמנה';
+  const toggleLabel = med.inOrder ? t('order.inListRemove') : t('order.add');
   const toggleClass = med.inOrder ? 'toggle-order-btn in-order' : 'toggle-order-btn';
 
   return `
@@ -358,9 +366,9 @@ function orderPlanningHTML(med) {
            הפקד שבתוכו, והכפילות הזו פתחה את בורר האפשרויות פעמיים. זו
            גם לא תווית אמיתית — רק טקסט שעוטף את הבורר משני צדדיו. -->
       <span class="order-planning-label">
-        להזמין מלאי ל-
+        ${t('order.planPrefix')}
         <select class="order-months-select" data-id="${med.id}">${optionsHTML}</select>
-        קדימה
+        ${t('order.planSuffix')}
       </span>
       <p class="order-planning-result">${resultText}</p>
       <button class="${toggleClass}" data-action="toggle-order" data-id="${med.id}">${toggleLabel}</button>
@@ -376,6 +384,10 @@ function medNamePair(med) {
   const entry = db.find(m =>
     m.he === med.name || m.en === med.name || (m.aliases || []).includes(med.name));
   if (!entry || entry.he === entry.en) return med.name;
+  /* מייל בעברית נשלח לבית מרקחת ישראלי, ושם הצמד "עברית / English" עוזר —
+     בית המרקחת מכיר את שני השמות. מייל באנגלית נכתב למי שאינו קורא עברית,
+     ולכן השם העברי שם הוא רעש ולא עזרה. */
+  if (activeLang() !== 'he') return entry.en;
   return `${entry.he} / ${entry.en}`;
 }
 
@@ -385,11 +397,11 @@ function medNamePair(med) {
 function cartItemBlock(med, index) {
   const qtyText = med.orderSnapshotBoxes
     ? boxesLabel(med.orderSnapshotBoxes)
-    : `כ-${med.orderSnapshotPills || 0} יחידות`;
+    : t('common.approxUnits', { n: med.orderSnapshotPills || 0 });
 
   const lines = [`${index + 1}. ${medNamePair(med)}`];
-  if (med.dose) lines.push(`   מינון: ${med.dose}`);   // המינון הוא שדה אופציונלי
-  lines.push(`   כמות: ${qtyText}`);
+  if (med.dose) lines.push(`   ${t('email.doseLabel')} ${localizeDose(med.dose)}`);   // המינון הוא שדה אופציונלי
+  lines.push(`   ${t('email.qtyLabel')} ${qtyText}`);
   return lines.join('\n');
 }
 
@@ -400,15 +412,15 @@ function todayStr() {
 
 function sentDateText(dateStr) {
   const diffDays = Math.round((new Date(todayStr()) - new Date(dateStr)) / 86400000);
-  if (diffDays <= 0) return 'נשלחה היום';
-  if (diffDays === 1) return 'נשלחה אתמול';
-  return `נשלחה לפני ${diffDays} ימים`;
+  if (diffDays <= 0) return t('order.sentToday');
+  if (diffDays === 1) return t('order.sentYesterday');
+  return t('order.sentAgo', { days: diffDays });
 }
 
 function cartRowHTML(med) {
   const qtyText = med.orderSnapshotBoxes
-    ? `${boxesLabel(med.orderSnapshotBoxes)} להזמנה (כ-${med.orderSnapshotPills} יחידות)`
-    : `כ-${med.orderSnapshotPills || 0} יחידות להזמנה`;
+    ? t('cart.qtyWithBoxes', { boxes: boxesLabel(med.orderSnapshotBoxes), pills: med.orderSnapshotPills })
+    : t('cart.qtyUnitsOnly', { pills: med.orderSnapshotPills || 0 });
   const isSent = !!med.orderSentDate;
   const sentLineHTML = isSent
     ? `<p class="cart-row-sent-date">✓ ${sentDateText(med.orderSentDate)}</p>`
@@ -417,18 +429,18 @@ function cartRowHTML(med) {
   // עדכון המלאי קורה מכאן, מהתרופות שכבר הוזמנו — ולא מ"דורש הזמנה",
   // שממנו הן ירדו ברגע שנשלחה ההזמנה
   const receiveBtnHTML = isSent
-    ? `<button class="cart-receive-btn" data-action="receive" data-id="${med.id}">ההזמנה הגיעה — עדכון מלאי</button>`
+    ? `<button class="cart-receive-btn" data-action="receive" data-id="${med.id}">${t('cart.receive')}</button>`
     : '';
 
   return `
     <div class="cart-row${isSent ? ' is-sent' : ''}" data-id="${med.id}">
       <div class="cart-row-main">
         <div class="cart-row-info">
-          <p class="cart-row-name"><bdi>${escapeHtml(med.name)}</bdi>${med.dose ? ` · <bdi>${escapeHtml(med.dose)}</bdi>` : ''}</p>
+          <p class="cart-row-name"><bdi>${escapeHtml(med.name)}</bdi>${med.dose ? ` · <bdi>${escapeHtml(localizeDose(med.dose))}</bdi>` : ''}</p>
           <p class="cart-row-qty">${qtyText}</p>
           ${sentLineHTML}
         </div>
-        <button class="cart-row-remove" data-action="toggle-order" data-id="${med.id}" aria-label="הסר מרשימת ההזמנה">✕</button>
+        <button class="cart-row-remove" data-action="toggle-order" data-id="${med.id}" aria-label="${t('cart.removeAria')}">✕</button>
       </div>
       ${receiveBtnHTML}
     </div>
@@ -509,6 +521,17 @@ async function writeAlertPlan(meds) {
   try {
     const plan = {
       updated: isoDate(startOfToday()),
+      /* ⚠️ ה-Service Worker לא יכול לקרוא localStorage, ולכן זו הדרך
+         היחידה שלו לדעת באיזו שפה להתריע. בלי השדה הזה ההתראות ברקע
+         נשארות בעברית — בלי שום שגיאה שתסגיר את זה. ראו NOTIFY_STRINGS
+         ב-sw.js.
+
+         ⚠️ ו-`activeLang()` ולא `currentLang()`: הראשונה קוראת את
+         documentElement.lang — בדיוק המקור ש-t() עובדת לפיו — והשנייה
+         קוראת את localStorage. היום השתיים מסכימות רק מפני שהמאזין כותב
+         ל-localStorage לפני הציור; כל שינוי בסדר הזה היה מפריד ביניהן
+         בשקט, וההתראות היו נכתבות בשפה הקודמת. */
+      lang: activeLang(),
       meds: meds
         .filter(med => !med.orderSentDate)       // כבר הוזמנה — אין על מה להתריע
         .map(med => ({ name: med.name, alertDate: alertDateFor(med) }))
@@ -543,14 +566,12 @@ function renderOrders(sortedMeds) {
     const awaiting = sortedMeds.filter(med => med.orderSentDate && med.inOrder);
     if (awaiting.length > 0) {
       ordersEmptyIconEl.textContent = '📦';
-      ordersEmptyTitleEl.textContent = 'ההזמנות בדרך';
-      ordersEmptyTextEl.textContent = awaiting.length === 1
-        ? 'תרופה אחת הוזמנה וממתינה ב"רשימת ההזמנות" — לעדכון המלאי כשתגיע'
-        : `${awaiting.length} תרופות הוזמנו וממתינות ב"רשימת ההזמנות" — לעדכון המלאי כשיגיעו`;
+      ordersEmptyTitleEl.textContent = t('orders.onTheWay.title');
+      ordersEmptyTextEl.textContent = t('orders.onTheWay.text', { n: awaiting.length });
     } else {
       ordersEmptyIconEl.textContent = '✓';
-      ordersEmptyTitleEl.textContent = 'הכל מעודכן';
-      ordersEmptyTextEl.textContent = 'אין כרגע תרופות שדורשות הזמנה';
+      ordersEmptyTitleEl.textContent = t('empty.orders.title');
+      ordersEmptyTextEl.textContent = t('empty.orders.text');
     }
     return;
   }
@@ -771,6 +792,55 @@ function enhanceSelects(root) {
   });
 }
 
+/* ---------- שפת האפליקציה ----------
+
+   הבחירה נשמרת ומשנה את `lang` ו-`dir` על <html>, והמחרוזות מגיעות מ-
+   [i18n.js](i18n.js) דרך `t()`.
+
+   **עברית ואנגלית מתורגמות במלואן. ערבית ורוסית עדיין לא** — הן מופיעות
+   בבורר ומהפכות את הכיוון, אבל הטקסט ייפול חזרה לעברית עד שיתווסף מילון.
+   זו נפילה מכוונת: מפתח חסר מציג עברית ולא מפתח גולמי.
+
+   ⚠️ **שפה חדשה נוגעת בשלושה מקומות, לא באחד:** המילון ב-i18n.js,
+   `LANG_DIR` כאן, ו-`NOTIFY_STRINGS` ב-[sw.js](sw.js) — שהוא עותק נפרד
+   בהכרח, כי Service Worker לא יכול לטעון את i18n.js. */
+
+const LANG_KEY = 'supplever_lang';
+const LANG_DIR = { he: 'rtl', ar: 'rtl', en: 'ltr', ru: 'ltr' };
+const langSelect = document.getElementById('langSelect');
+
+function currentLang() {
+  const saved = localStorage.getItem(LANG_KEY);
+  return LANG_DIR[saved] ? saved : 'he';   // ברירת המחדל עברית, גם לערך פגום
+}
+
+/* ⚠️ `redraw=false` בקריאה שרצה בזמן טעינת הסקריפט. הציור קורא ל-
+   syncNativeNotifications, שניגש ל-isNativeApp — קבוע שמוצהר בהמשך הקובץ,
+   ולכן בשלב הזה הוא עדיין ב-temporal dead zone וזורק ReferenceError.
+   בטעינה אין בכך צורך ממילא: האתחול הרגיל של האפליקציה מצייר בעצמו. */
+function applyLang(code, redraw = true) {
+  const lang = LANG_DIR[code] ? code : 'he';
+  document.documentElement.lang = lang;   // ⚠️ לפני applyStaticStrings — t() קורא אותו
+  document.documentElement.dir = LANG_DIR[lang];
+  langSelect.value = lang;
+  applyStaticStrings();
+  // הטקסט שנבנה בזמן ציור (כרטיסים, מסכי ריק, באדג'ים) לא יושב ב-DOM
+  // כתבנית, ולכן החלפת שפה מחייבת ציור מחדש ולא רק החלפת מחרוזות סטטיות.
+  if (redraw && typeof render === 'function') render();
+}
+
+document.getElementById('langBtn').addEventListener('click', () => {
+  langSelect.value = currentLang();   // כדי שהנבחר יסומן בחלון
+  openChoiceDialog(langSelect);
+});
+
+langSelect.addEventListener('change', () => {
+  localStorage.setItem(LANG_KEY, langSelect.value);
+  applyLang(langSelect.value);
+});
+
+applyLang(currentLang(), false);
+
 /* ---------- כפתור "אחורה" של הטלפון באפליקציה הארוזה ----------
 
    בדפדפן הכל שלמעלה עובד לבד: הדפדפן מקבל את לחיצת ה-back, מוציא רשומה
@@ -852,7 +922,7 @@ const confirmTextEl = document.getElementById('confirmText');
 const confirmOkBtn = document.getElementById('confirmOkBtn');
 let confirmResolve = null;
 
-function askConfirm({ title, text, okLabel = 'אישור' }) {
+function askConfirm({ title, text, okLabel = t('common.ok') }) {
   confirmTitleEl.textContent = title;
   confirmTextEl.textContent = text;
   confirmOkBtn.textContent = okLabel;
@@ -1017,9 +1087,12 @@ function updateDoseOptions() {
   const doses = entry && Array.isArray(entry.doses) ? entry.doses : null;
   currentDoseOptions = doses && doses.length ? doses : null;
   if (currentDoseOptions) {
-    doseSelectEl.innerHTML = '<option value="">בחרו מינון...</option>' +
-      currentDoseOptions.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('') +
-      `<option value="${DOSE_OTHER_VALUE}">אחר (הזנה ידנית)</option>`;
+    /* ⚠️ ה-value נשאר הערך הגולמי מהמאגר, ורק הטקסט מתורגם: form.dose.value
+       נשמר ומושווה מול currentDoseOptions, ותרגום ה-value היה שובר את
+       ההשוואה ואת מה שנשמר על התרופה. */
+    doseSelectEl.innerHTML = `<option value="">${t('common.chooseDose')}</option>` +
+      currentDoseOptions.map(d => `<option value="${escapeHtml(d)}">${escapeHtml(localizeDose(d))}</option>`).join('') +
+      `<option value="${DOSE_OTHER_VALUE}">${t('common.doseOther')}</option>`;
     if (form.dose.value && !currentDoseOptions.includes(form.dose.value)) {
       // הערך הקיים לא ברשימה (למשל תרופה שנשמרה עם מינון מותאם אישית) —
       // משאירים את שדה הטקסט גלוי כדי לא "להסתיר" ערך אמיתי שכבר נשמר
@@ -1064,7 +1137,7 @@ form.name.addEventListener('input', () => {
 function openModal(med = null) {
   closeSuggestions();
   editingId = med ? med.id : null;
-  modalTitle.textContent = med ? 'עריכת תרופה' : 'הוספת תרופה';
+  modalTitle.textContent = med ? t('common.editMed') : t('common.addMed');
   deleteBtn.style.display = med ? 'block' : 'none';
   form.name.value = med ? med.name : '';
   form.dose.value = med ? med.dose : '';
@@ -1124,10 +1197,24 @@ function matchMedications(query) {
   const db = typeof MEDICATIONS_DB !== 'undefined' ? MEDICATIONS_DB : [];
   // aliases = כתיבים חלופיים בעברית לאותה תרופה (למשל "פולמוזים" מול "פולמוזיים").
   // הם רק עוזרים למצוא אותה בחיפוש; מה שנכנס בפועל לשדה השם הוא תמיד השם הראשי.
+  /* ⚠️ בשפה שאינה עברית מחפשים ומציעים **רק** את השם האנגלי, ולא נופלים
+     חזרה לעברית: דובר אנגלית שמקליד "ome" צריך לקבל Omeprazole ולא
+     "אומפרזול", וגם לא את העברית כתווית משנית. הכינויים (aliases) הם
+     איותים עבריים חלופיים ולכן מושמטים גם הם. */
+  const latinOnly = activeLang() !== 'he';
+  if (latinOnly) {
+    return db
+      .filter(m => m.en.toLowerCase().startsWith(qLower))
+      .map(m => ({ ...m, fill: m.en, label: m.en, sub: '' }))
+      .sort((a, b) => a.fill.localeCompare(b.fill))
+      .slice(0, 8);
+  }
+
   const matchesHebrew = (m) => m.he.startsWith(q) || (m.aliases || []).some(a => a.startsWith(q));
   return db
     .filter(m => matchesHebrew(m) || m.en.toLowerCase().startsWith(qLower))
-    .map(m => ({ ...m, fill: matchesHebrew(m) ? m.he : m.en }))
+    .map(m => ({ ...m, fill: matchesHebrew(m) ? m.he : m.en,
+                 label: m.he, sub: m.he !== m.en ? m.en : '' }))
     .sort((a, b) => a.fill.localeCompare(b.fill))
     .slice(0, 8);
 }
@@ -1140,7 +1227,7 @@ function renderSuggestions(matches) {
   }
   nameSuggestionsEl.innerHTML = matches.map(m => `
     <li class="autocomplete-item" data-fill="${escapeHtml(m.fill)}" dir="auto">
-      ${escapeHtml(m.he)}${m.he !== m.en ? ` <span class="ac-en">· ${escapeHtml(m.en)}</span>` : ''}
+      ${escapeHtml(m.label)}${m.sub ? ` <span class="ac-en">· ${escapeHtml(m.sub)}</span>` : ''}
     </li>
   `).join('');
   nameSuggestionsEl.hidden = false;
@@ -1221,19 +1308,19 @@ function medFormProblems(med) {
 
   /* `!(x > 0)` ולא `x <= 0` — כדי לתפוס גם שדה ריק, ש-parseFloat מחזיר
      עליו NaN, וכל השוואה איתו היא false. */
-  if (!med.name) add('name', 'יש להזין שם');
-  if (!(med.pillsPerBox > 0)) add('pillsPerBox', 'יש להזין מספר גדול מאפס');
+  if (!med.name) add('name', t('validation.name'));
+  if (!(med.pillsPerBox > 0)) add('pillsPerBox', t('validation.positive'));
 
   const rateField = { weekly: 'weeklyRate', cycle: 'cycleRate' }[med.freqMode] || 'dailyRate';
-  if (!(med.dailyRate > 0)) add(rateField, 'יש להזין מספר גדול מאפס');
+  if (!(med.dailyRate > 0)) add(rateField, t('validation.positive'));
   if (med.freqMode === 'cycle') {
-    if (!(med.cycleOnDays > 0)) add('cycleOnDays', 'יש להזין מספר גדול מאפס');
-    if (!(med.cycleOffDays > 0)) add('cycleOffDays', 'יש להזין מספר גדול מאפס');
+    if (!(med.cycleOnDays > 0)) add('cycleOnDays', t('validation.positive'));
+    if (!(med.cycleOffDays > 0)) add('cycleOffDays', t('validation.positive'));
   }
 
   /* במלאי 0 הוא ערך תקין — למי שהתרופה נגמרה לו — ולכן הניסוח שונה. */
-  if (!(med.currentBoxes >= 0)) add('currentBoxes', 'יש להזין מספר');
-  if (!(med.currentStock >= 0)) add('currentStock', 'יש להזין מספר');
+  if (!(med.currentBoxes >= 0)) add('currentBoxes', t('validation.number'));
+  if (!(med.currentStock >= 0)) add('currentStock', t('validation.number'));
 
   return problems;
 }
@@ -1296,10 +1383,10 @@ form.addEventListener('submit', (e) => {
   localStorage.setItem(DEFAULT_ALERT_DAYS_KEY, String(med.alertDays));
   if (editingId) {
     updateMed(editingId, med);
-    showToast('התרופה עודכנה');
+    showToast(t('toast.medUpdated'));
   } else {
     addMed(med);
-    showToast('התרופה נוספה בהצלחה');
+    showToast(t('toast.medAdded'));
   }
   closeModal();
   render();
@@ -1309,15 +1396,15 @@ deleteBtn.addEventListener('click', async () => {
   if (!editingId) return;
   const id = editingId;   // נשמר מראש: closeModal מאפס את editingId
   const confirmed = await askConfirm({
-    title: 'מחיקת תרופה',
-    text: 'האם למחוק תרופה זו?',
-    okLabel: 'מחיקה',
+    title: t('confirm.deleteMed.title'),
+    text: t('confirm.deleteMed.text'),
+    okLabel: t('confirm.deleteMed.ok'),
   });
   if (!confirmed) return;
   deleteMed(id);
   closeModal();
   render();
-  showToast('התרופה נמחקה');
+  showToast(t('toast.medDeleted'));
 });
 
 function handleListClick(e) {
@@ -1343,7 +1430,7 @@ function handleListClick(e) {
         updateMed(med.id, { inOrder: false, orderSentDate: null });
       }
       render();
-      showToast(newState ? 'נוספה לרשימת ההזמנה' : 'הוסרה מרשימת ההזמנה');
+      showToast(t(newState ? 'toast.addedToOrder' : 'toast.removedFromOrder'));
     }
     return;
   }
@@ -1412,8 +1499,8 @@ function openReceiveModal(id) {
   const med = loadMeds().find(m => m.id === id);
   if (!med) return;
   receivingId = id;
-  const perBoxHint = med.pillsPerBox ? ` · כל קופסה = ${med.pillsPerBox} יחידות` : '';
-  receiveMedNameEl.textContent = `${med.name} · מלאי נוכחי: ${effectiveStock(med)} יחידות${perBoxHint}`;
+  const perBoxHint = med.pillsPerBox ? ` · ${t('card.perBoxHint', { n: med.pillsPerBox })}` : '';
+  receiveMedNameEl.textContent = `${med.name} · ${t('card.stockNow', { n: effectiveStock(med) })}${perBoxHint}`;
   receiveForm.reset();
 
   /* תרופה שנמצאת כרגע בהזמנה נפתחת עם הכמות שהוזמנה כברירת מחדל — ברוב המקרים
@@ -1460,7 +1547,7 @@ receiveForm.addEventListener('submit', (e) => {
   });
   closeReceiveModal();
   render();
-  showToast('המלאי עודכן');
+  showToast(t('toast.stockUpdated'));
 });
 
 /* ---------- toast ---------- */
@@ -1487,14 +1574,17 @@ function saveUserEmail(email) {
 function updateSendEmailInfo() {
   const email = getUserEmail();
   sendEmailInfoEl.innerHTML = email
-    ? `הרשימה תישלח אל ${escapeHtml(email)} · <button type="button" id="changeEmailBtn">שינוי</button>`
+    ? `${t('email.willSendTo', { email: escapeHtml(email) })} · <button type="button" id="changeEmailBtn">${t('common.change')}</button>`
     : '';
 }
 
+/* המייל כולו נבנה בשפת האפליקציה — נושא, פתיחה, תוויות הבלוקים וחתימה.
+   חצי מייל מתורגם גרוע יותר ממייל שלא תורגם בכלל: בית המרקחת מקבל טקסט
+   שמחצית ממנו הוא בשפה שהוא לא ציפה לה, ובכיוון כתיבה הפוך. */
 function buildOrderMailto(toEmail, cartMeds) {
-  const subject = 'רשימת הזמנת תרופות - Supplever';
+  const subject = t('email.subject');
   const blocks = cartMeds.map(cartItemBlock).join('\n\n');
-  const body = `שלום רב,\n\nרשימת ההזמנות הנוכחית שלי היא:\n\n${blocks}\n\nנשלח מתוך Supplever`;
+  const body = `${t('email.greeting')}\n\n${t('email.intro')}\n\n${blocks}\n\n${t('email.signature')}`;
   return `mailto:${toEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
@@ -1505,7 +1595,7 @@ function sendOrderListByEmail(cartMeds) {
   const today = todayStr();
   cartMeds.forEach(med => updateMed(med.id, { orderSentDate: today }));
   render();
-  showToast(`נפתח מייל אל ${email}`);
+  showToast(t('toast.mailOpened', { email }));
 }
 
 /* רק מה שעדיין לא נשלח — תרופה שכבר יצאה בהזמנה קודמת לא חוזרת למייל הבא */
@@ -1542,11 +1632,11 @@ function openEmailModal(mode, reuseHistoryEntry = false) {
   emailModalMode = mode;
   emailInput.value = getUserEmail();
   if (mode === 'send') {
-    emailModalTitleEl.textContent = 'לאן לשלוח את הרשימה?';
-    emailSubmitBtn.textContent = 'שמירה ושליחה';
+    emailModalTitleEl.textContent = t('email.sendTitle');
+    emailSubmitBtn.textContent = t('email.sendBtn');
   } else {
-    emailModalTitleEl.textContent = 'עדכון כתובת מייל';
-    emailSubmitBtn.textContent = 'שמירה';
+    emailModalTitleEl.textContent = t('email.editTitle');
+    emailSubmitBtn.textContent = t('email.editBtn');
   }
   emailOverlay.classList.add('open');
   if (!reuseHistoryEntry) registerDialogOpen();
@@ -1576,7 +1666,7 @@ emailForm.addEventListener('submit', (e) => {
   if (mode === 'send') {
     sendOrderListByEmail(medsPendingSend());
   } else {
-    showToast('כתובת המייל עודכנה');
+    showToast(t('toast.emailUpdated'));
   }
 });
 
@@ -1698,8 +1788,8 @@ async function syncNativeNotifications(meds) {
       if (at.getTime() <= Date.now()) return;
       list.push({
         id: 2000 + i,
-        title: `${med.name} — מומלץ להזמין`,
-        body: 'פתחו את Supplever כדי להוסיף לרשימת ההזמנות',
+        title: t('notification.reorderTitle', { name: med.name }),
+        body: t('notification.reorderBody'),
         /* isExactNotification: false — ברירת המחדל של הרכיב היא התראה מדויקת
            לשנייה, וזו הרשאה שאנדרואיד 14 חוסם כברירת מחדל. כשהיא חסומה הרכיב
            פותח למשתמש את מסך ההגדרות של אנדרואיד בכל קריאה ל-schedule — כלומר
@@ -1812,11 +1902,11 @@ async function checkAndNotify() {
     const med = due[0];
     await showSystemNotification(
       `${med.name} — ${formatDays(daysRemaining(med))}`,
-      'מומלץ להזמין בהקדם דרך Supplever'
+      t('notification.singleBody')
     );
   } else {
     await showSystemNotification(
-      `${due.length} תרופות דורשות הזמנה`,
+      t('notification.multiTitle', { n: due.length }),
       due.map(m => m.name).join(', ')
     );
   }
@@ -1829,7 +1919,7 @@ document.getElementById('enableNotifyBtn').addEventListener('click', async () =>
   const permission = await ensureNotificationPermission();
   updateNotifyBanner();
   if (permission === 'granted') {
-    showToast('התראות הופעלו');
+    showToast(t('toast.notifyOn'));
     checkAndNotify();
     syncNativeNotifications(loadMeds());
   }
@@ -1844,15 +1934,23 @@ document.getElementById('dismissNotifyBtn').addEventListener('click', () => {
 
 const settingsOverlay = document.getElementById('settingsModalOverlay');
 const settingsEmailValueEl = document.getElementById('settingsEmailValue');
+const settingsEmailBtnEl = document.getElementById('settingsEmailBtn');
 
 function openSettingsModal() {
-  settingsEmailValueEl.textContent = getUserEmail() || 'עדיין לא הוגדרה כתובת';
+  /* ⚠️ אין "שינוי כתובת" כשאין כתובת. כל עוד לא הוגדרה אחת, שורת הערך
+     מוסתרת לגמרי והכפתור מזמין להזין — ולא להחליף משהו שאינו קיים.
+     הכתובת עשויה להיקבע גם מחוץ למסך הזה, בשליחה הראשונה של הרשימה,
+     ולכן הבדיקה נעשית בכל פתיחה ולא פעם אחת. */
+  const savedEmail = getUserEmail();
+  settingsEmailValueEl.textContent = savedEmail || '';
+  settingsEmailValueEl.hidden = !savedEmail;
+  settingsEmailBtnEl.textContent = t(savedEmail ? 'settings.email.change' : 'settings.email.add');
 
   /* אותו מסך, שתי אמיתות שונות. באפליקציה ההתראה מתוזמנת במערכת ההפעלה
      ולכן היא באמת מגיעה גם כשהאפליקציה סגורה; בדפדפן היא תלויה בהחלטה של
      Chrome, ולכן שם הניסוח נשאר מסויג ("כשאפשר") ואינו מבטיח דבר. */
   if (isNativeApp) {
-    document.getElementById('notifyBackgroundTitle').textContent = 'גם כשהאפליקציה סגורה';
+    document.getElementById('notifyBackgroundTitle').textContent = t('notification.bgNativeTitle');
   }
   const mode = notifyMode();
   const chosen = settingsOverlay.querySelector(`input[name="notifyMode"][value="${mode}"]`);
@@ -1890,7 +1988,7 @@ settingsOverlay.addEventListener('change', async (e) => {
 
   if (mode === 'off') {
     syncNativeNotifications(loadMeds());   // מבטל תזמונים קיימים
-    showToast('ההתראות כובו');
+    showToast(t('toast.notifyOff'));
     return;
   }
 
@@ -1900,7 +1998,7 @@ settingsOverlay.addEventListener('change', async (e) => {
   const permission = await ensureNotificationPermission();
   updateNotifyBanner();
   if (permission === 'denied') {
-    showToast('ההתראות חסומות בהגדרות המכשיר');
+    showToast(t('toast.notifyBlocked'));
     return;
   }
 
@@ -1911,7 +2009,7 @@ settingsOverlay.addEventListener('change', async (e) => {
     });
   }
   syncNativeNotifications(loadMeds());
-  showToast('ההגדרה נשמרה');
+  showToast(t('toast.settingSaved'));
   checkAndNotify();
 });
 
@@ -1957,10 +2055,10 @@ document.getElementById('exportBtn').addEventListener('click', async () => {
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    showToast('הגיבוי נשמר');
+    showToast(t('toast.backupSaved'));
   } catch (err) {
     console.error('Export failed', err);
-    showToast('הגיבוי נכשל');
+    showToast(t('toast.backupFailed'));
   }
 });
 
@@ -1977,23 +2075,23 @@ document.getElementById('importFile').addEventListener('change', async (e) => {
   try {
     backup = JSON.parse(await file.text());
   } catch (err) {
-    showToast('הקובץ אינו קובץ גיבוי תקין');
+    showToast(t('toast.backupInvalid'));
     return;
   }
   if (!backup || backup.app !== 'Supplever' || !Array.isArray(backup.meds)) {
-    showToast('הקובץ אינו קובץ גיבוי של Supplever');
+    showToast(t('toast.backupNotOurs'));
     return;
   }
 
   const current = loadMeds().length;
-  const inBackup = backup.meds.length === 1 ? 'תרופה אחת' : `${backup.meds.length} תרופות`;
-  const inApp = current === 1 ? 'התרופה שנמצאת' : `${current} התרופות שנמצאות`;
+  const inBackup = t('backup.medCount', { n: backup.meds.length });
+  const inApp = t('backup.inApp', { n: current });
   const confirmed = await askConfirm({
-    title: 'שחזור מגיבוי',
+    title: t('confirm.restore.title'),
     text: current
-      ? `הגיבוי מכיל ${inBackup}. השחזור יחליף את ${inApp} כעת באפליקציה, ואי אפשר לבטל אותו.`
-      : `לשחזר ${inBackup} מהגיבוי?`,
-    okLabel: 'שחזור',
+      ? t('confirm.restore.replace', { inBackup, inApp })
+      : t('confirm.restore.empty', { inBackup }),
+    okLabel: t('confirm.restore.ok'),
   });
   if (!confirmed) return;
 
@@ -2007,7 +2105,7 @@ document.getElementById('importFile').addEventListener('change', async (e) => {
   anchorMissingStockDates();
   render();
   updateSendEmailInfo();
-  showToast(backup.meds.length === 1 ? 'שוחזרה תרופה אחת' : `שוחזרו ${backup.meds.length} תרופות`);
+  showToast(t('toast.restored', { n: backup.meds.length }));
 });
 
 /* ---------- init ---------- */

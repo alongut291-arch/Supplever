@@ -1,7 +1,7 @@
 // Service worker for Supplever.
 // Handles: offline app-shell caching, and showing system notifications.
 // Bump CACHE_NAME whenever app files change, so users get the fresh version.
-const CACHE_NAME = 'supplever-v75';
+const CACHE_NAME = 'supplever-v76';
 
 /* תוכנית ההתראות שהדף כותב (ראו writeAlertPlan ב-app.js). מכוון שהיא לא
    נושאת מספר גרסה — היא נתוני משתמש ולא קובץ אפליקציה, ואסור שתימחק
@@ -75,6 +75,28 @@ function todayISO() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/* ⚠️ טקסט ההתראה משוכפל כאן בכוונה, ואין לאחד אותו עם i18n.js.
+
+   ה-Service Worker **לא יכול לקרוא localStorage**, ולכן אין לו דרך לדעת
+   באיזו שפה המשתמש בחר. הוא מקבל אותה דרך `plan.lang` — אותה תוכנית
+   שה-writeAlertPlan ב-app.js כותב ל-Cache Storage, בדיוק כמו התאריכים.
+
+   ו-`importScripts('i18n.js')` לא יעבוד: הקובץ ההוא ניגש ל-document, שלא
+   קיים כאן. שני ביטויים, מחיר סביר — אבל **שפה שמתווספת ל-i18n.js חייבת
+   להתווסף גם כאן**, אחרת ההתראות ברקע יישארו בעברית בלי שום שגיאה. */
+const NOTIFY_STRINGS = {
+  he: {
+    titleOne: (name) => `${name} — מומלץ להזמין`,
+    titleMany: (n) => `${n} תרופות דורשות הזמנה`,
+    bodyOne: 'פתחו את Supplever כדי להוסיף לרשימת ההזמנות',
+  },
+  en: {
+    titleOne: (name) => `${name} — time to reorder`,
+    titleMany: (n) => `${n} medicines need reordering`,
+    bodyOne: 'Open Supplever to add it to your order list',
+  },
+};
+
 async function checkStockInBackground() {
   const cache = await caches.open(PLAN_CACHE);
   const res = await cache.match(PLAN_URL);
@@ -89,12 +111,9 @@ async function checkStockInBackground() {
   const due = (plan.meds || []).filter((m) => m.alertDate && m.alertDate <= today);
   if (due.length === 0) return;
 
-  const title = due.length === 1
-    ? `${due[0].name} — מומלץ להזמין`
-    : `${due.length} תרופות דורשות הזמנה`;
-  const body = due.length === 1
-    ? 'פתחו את Supplever כדי להוסיף לרשימת ההזמנות'
-    : due.map((m) => m.name).join(', ');
+  const s = NOTIFY_STRINGS[plan.lang] || NOTIFY_STRINGS.he;
+  const title = due.length === 1 ? s.titleOne(due[0].name) : s.titleMany(due.length);
+  const body = due.length === 1 ? s.bodyOne : due.map((m) => m.name).join(', ');
 
   await self.registration.showNotification(title, { body, tag: 'supplever-stock' });
 

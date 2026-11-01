@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Supplever — המלאי שלי</title>
+<title data-i18n="app.title">Supplever — המלאי שלי</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;700;900&family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -42,36 +42,56 @@
     </svg>
     <div>
       <p class="app-title">Supplever</p>
-      <p class="app-sub">תמיד צעד אחד לפני גמר המלאי</p>
+      <p class="app-sub" data-i18n="app.tagline">תמיד צעד אחד לפני גמר המלאי</p>
     </div>
   </div>
-  <button type="button" id="settingsBtn" class="settings-btn" aria-label="הגדרות">
+  <div class="header-actions">
+  <button type="button" id="langBtn" class="settings-btn" aria-label="שפת האפליקציה" data-i18n-aria="a11y.language">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9"></circle>
+      <path d="M3 12h18"></path>
+      <path d="M12 3c2.5 2.5 3.8 5.6 3.8 9S14.5 18.5 12 21c-2.5-2.5-3.8-5.6-3.8-9S9.5 5.5 12 3z"></path>
+    </svg>
+  </button>
+  <button type="button" id="settingsBtn" class="settings-btn" aria-label="הגדרות" data-i18n-aria="a11y.settings">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="3"></circle>
       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
     </svg>
   </button>
+  </div>
+  <!-- בורר השפה מצויר ע"י openChoiceDialog, שמקבל <select> ובונה ממנו את
+       הרשימה. לכן אין כאן חלון נפרד: ה-select מוסתר ומשמש רק כמקור
+       האפשרויות ולשמירת הערך, וכל טיפול ההיסטוריה וכפתור ה-back מגיע בחינם.
+       `data-choice="1"` מונע מ-enhanceSelects לעטוף אותו בעטיפה נראית. -->
+  <select id="langSelect" data-choice="1" hidden>
+    <option value="he">עברית</option>
+    <option value="ar">العربية</option>
+    <option value="en">English</option>
+    <option value="ru">Русский</option>
+  </select>
 </header>
 
 <nav class="tabs wrap">
-  <button class="tab-btn active" id="tabDashboard" data-view="dashboard">המלאי שלי</button>
+  <button class="tab-btn active" id="tabDashboard" data-view="dashboard"><span data-i18n="tabs.stock">המלאי שלי</span></button>
   <button class="tab-btn" id="tabOrders" data-view="orders">
-    דורש הזמנה
+    <span data-i18n="tabs.orders">דורש הזמנה</span>
     <span id="orderBadge" class="tab-badge" hidden>0</span>
   </button>
   <button class="tab-btn" id="tabCart" data-view="cart">
-    רשימת ההזמנות
+    <span data-i18n="tabs.cart">רשימת ההזמנות</span>
     <span id="cartBadge" class="tab-badge" hidden>0</span>
   </button>
 </nav>
 
 <main class="wrap">
   <div id="notifyBanner" class="notify-banner" hidden>
-    <p>הפעילו התראות כדי לדעת מיד עם פתיחת האפליקציה אם יש תרופה שדורשת הזמנה</p>
+    <p data-i18n="notify.banner">הפעילו התראות כדי לדעת מיד עם פתיחת האפליקציה אם יש תרופה שדורשת הזמנה</p>
     <div class="notify-banner-actions">
-      <button id="enableNotifyBtn" class="btn-primary-sm">הפעלת התראות</button>
-      <button id="dismissNotifyBtn" class="btn-text-sm">לא עכשיו</button>
+      <button id="enableNotifyBtn" class="btn-primary-sm" data-i18n="notify.enable">הפעלת התראות</button>
+      <button id="dismissNotifyBtn" class="btn-text-sm" data-i18n="notify.later">לא עכשיו</button>
     </div>
   </div>
 
@@ -100,8 +120,8 @@
           <ellipse cx="-14" cy="-11" rx="22" ry="6" fill="#ffffff" opacity="0.35"/>
         </g>
       </svg>
-      <p><strong>עדיין לא הוספתם תרופות</strong></p>
-      <p>לחצו על "הוספת תרופה" כדי להתחיל לעקוב אחרי המלאי</p>
+      <p><strong data-i18n="empty.stock.title">עדיין לא הוספתם תרופות</strong></p>
+      <p data-i18n="empty.stock.text">לחצו על "הוספת תרופה" כדי להתחיל לעקוב אחרי המלאי</p>
     </div>
 
     <div id="medList" class="med-list"></div>
@@ -114,87 +134,87 @@
       <p id="ordersEmptyText">אין כרגע תרופות שדורשות הזמנה</p>
     </div>
 
-    <p id="ordersPendingLabel" class="section-label" hidden>טרם נוספו לרשימת ההזמנות <span id="ordersPendingCount" class="count"></span></p>
+    <p id="ordersPendingLabel" class="section-label" hidden><span data-i18n="orders.label.pending">טרם נוספו לרשימת ההזמנות</span> <span id="ordersPendingCount" class="count"></span></p>
     <div id="orderList" class="med-list"></div>
 
-    <p id="ordersAddedLabel" class="section-label added" hidden>כבר ברשימת ההזמנות <span id="ordersAddedCount" class="count"></span></p>
+    <p id="ordersAddedLabel" class="section-label added" hidden><span data-i18n="orders.label.added">כבר ברשימת ההזמנות</span> <span id="ordersAddedCount" class="count"></span></p>
     <div id="orderListAdded" class="med-list"></div>
   </section>
 
   <section id="cartView" class="view" hidden>
     <div id="cartEmptyState" class="empty-state">
       <p class="big">🛒</p>
-      <p><strong>עדיין לא הוספתם תרופות להזמנה</strong></p>
-      <p>לחצו על "הוסף להזמנה" מתוך "דורש הזמנה" כדי להתחיל לרכז רשימה</p>
+      <p><strong data-i18n="empty.cart.title">עדיין לא הוספתם תרופות להזמנה</strong></p>
+      <p data-i18n="empty.cart.text">לחצו על "הוסף להזמנה" מתוך "דורש הזמנה" כדי להתחיל לרכז רשימה</p>
     </div>
 
-    <p id="cartPendingLabel" class="section-label" hidden>טרם נשלחה הזמנה <span id="cartPendingCount" class="count"></span></p>
+    <p id="cartPendingLabel" class="section-label" hidden><span data-i18n="cart.label.pending">טרם נשלחה הזמנה</span> <span id="cartPendingCount" class="count"></span></p>
     <div id="cartListPending" class="med-list"></div>
 
     <div id="cartActions" class="cart-actions" style="display:none;">
-      <button type="button" id="sendOrderBtn" class="send-order-btn">שליחת רשימת ההזמנות</button>
+      <button type="button" id="sendOrderBtn" class="send-order-btn" data-i18n="cart.send">שליחת רשימת ההזמנות</button>
       <p id="sendEmailInfo" class="cart-send-info"></p>
     </div>
 
-    <p id="cartSentLabel" class="section-label sent" hidden>כבר נשלחה הזמנה <span id="cartSentCount" class="count"></span></p>
+    <p id="cartSentLabel" class="section-label sent" hidden><span data-i18n="cart.label.sent">כבר נשלחה הזמנה</span> <span id="cartSentCount" class="count"></span></p>
     <div id="cartListSent" class="med-list"></div>
   </section>
 </main>
 
 <footer class="app-footer">
-  <a href="./privacy.html">מדיניות פרטיות</a>
+  <a href="./privacy.html" data-i18n="footer.privacy">מדיניות פרטיות</a>
 </footer>
 
-<button id="addFab" class="fab">+ הוספת תרופה</button>
+<button id="addFab" class="fab" data-i18n="fab.add">+ הוספת תרופה</button>
 
 <div id="modalOverlay" class="modal-overlay">
   <div class="modal">
     <h2 id="modalTitle">הוספת תרופה</h2>
     <form id="medForm" novalidate>
       <div class="field">
-        <label for="name">שם התרופה</label>
+        <label for="name" data-i18n="form.name">שם התרופה</label>
         <div class="autocomplete-wrap">
-          <input type="text" id="name" name="name" required placeholder="לדוגמה: Omeprazole" autocomplete="off">
+          <input type="text" id="name" name="name" required placeholder="לדוגמה: Omeprazole" data-i18n-placeholder="form.name.placeholder" autocomplete="off">
           <ul id="nameSuggestions" class="autocomplete-list" hidden></ul>
         </div>
       </div>
       <div class="field">
-        <label for="dose">מינון (אופציונלי)</label>
+        <label for="dose" data-i18n="form.dose">מינון (אופציונלי)</label>
         <select id="doseSelect" class="dose-select" hidden></select>
-        <input type="text" id="dose" name="dose" placeholder="לדוגמה: 20 מ״ג">
+        <input type="text" id="dose" name="dose" placeholder="לדוגמה: 20 מ״ג" data-i18n-placeholder="form.dose.placeholder">
       </div>
       <div id="packHelper" class="pack-helper" hidden>
-        <p class="pack-helper-title">זוהה עט אינסולין — נחשב עבורכם את סך היחידות בקופסה</p>
+        <p class="pack-helper-title" data-i18n="form.pen.title">זוהה עט אינסולין — נחשב עבורכם את סך היחידות בקופסה</p>
         <div class="field-row">
           <div class="field">
-            <label for="packSubUnits">כמות עטים בקופסה</label>
+            <label for="packSubUnits" data-i18n="form.pen.pensPerBox">כמות עטים בקופסה</label>
             <input type="number" id="packSubUnits" step="1" min="1" placeholder="5">
           </div>
           <div class="field">
-            <label for="packUnitsPerSub">כמות יחידות בכל עט</label>
+            <label for="packUnitsPerSub" data-i18n="form.pen.unitsPerPen">כמות יחידות בכל עט</label>
             <input type="number" id="packUnitsPerSub" step="1" min="1" placeholder="300">
           </div>
         </div>
-        <p class="field-hint">ימלא אוטומטית את "כמות יחידות בקופסה" למטה — אפשר לתקן את המספרים אם הריכוז שונה</p>
+        <p class="field-hint" data-i18n="form.pen.hint">ימלא אוטומטית את "כמות יחידות בקופסה" למטה — אפשר לתקן את המספרים אם הריכוז שונה</p>
       </div>
       <div class="field">
-        <label for="pillsPerBox">כמות יחידות בקופסה</label>
+        <label for="pillsPerBox" data-i18n="form.pillsPerBox">כמות יחידות בקופסה</label>
         <input type="number" id="pillsPerBox" name="pillsPerBox" step="1" min="1" required>
       </div>
 
       <div class="field">
-        <label for="freqMode">תדירות נטילה</label>
+        <label for="freqMode" data-i18n="form.freq">תדירות נטילה</label>
         <select id="freqMode" name="freqMode">
-          <option value="daily">כל יום</option>
-          <option value="weekly">כמה פעמים בשבוע</option>
-          <option value="cycle">מחזורי — תקופת נטילה והפסקה</option>
+          <option value="daily" data-i18n="form.freq.daily">כל יום</option>
+          <option value="weekly" data-i18n="form.freq.weekly">כמה פעמים בשבוע</option>
+          <option value="cycle" data-i18n="form.freq.cycle">מחזורי — תקופת נטילה והפסקה</option>
         </select>
       </div>
 
       <!-- תדירות: כל יום -->
       <div class="freq-block" id="freqBlockDaily">
         <div class="field">
-          <label for="dailyRate">יחידות ביום</label>
+          <label for="dailyRate" data-i18n="form.dailyRate">יחידות ביום</label>
           <input type="number" id="dailyRate" name="dailyRate" step="0.5" min="0.5">
         </div>
       </div>
@@ -203,18 +223,18 @@
       <div class="freq-block" id="freqBlockWeekly" hidden>
         <div class="field-row">
           <div class="field">
-            <label for="weeklyRate">יחידות בכל נטילה</label>
+            <label for="weeklyRate" data-i18n="form.weeklyRate">יחידות בכל נטילה</label>
             <input type="number" id="weeklyRate" name="weeklyRate" step="0.5" min="0.5">
           </div>
           <div class="field">
-            <label for="timesPerWeek">פעמים בשבוע</label>
+            <label for="timesPerWeek" data-i18n="form.timesPerWeek">פעמים בשבוע</label>
             <select id="timesPerWeek" name="timesPerWeek">
-              <option value="1">פעם אחת</option>
-              <option value="2">פעמיים</option>
-              <option value="3">3 פעמים</option>
-              <option value="4">4 פעמים</option>
-              <option value="5">5 פעמים</option>
-              <option value="6">6 פעמים</option>
+              <option value="1" data-i18n="form.timesPerWeek.1">פעם אחת</option>
+              <option value="2" data-i18n="form.timesPerWeek.2">פעמיים</option>
+              <option value="3" data-i18n="form.timesPerWeek.3">3 פעמים</option>
+              <option value="4" data-i18n="form.timesPerWeek.4">4 פעמים</option>
+              <option value="5" data-i18n="form.timesPerWeek.5">5 פעמים</option>
+              <option value="6" data-i18n="form.timesPerWeek.6">6 פעמים</option>
             </select>
           </div>
         </div>
@@ -223,74 +243,74 @@
       <!-- תדירות: מחזורי -->
       <div class="freq-block" id="freqBlockCycle" hidden>
         <div class="preset-row" id="cyclePresets">
-          <button type="button" class="preset" data-on="30" data-off="30">חודש כן / חודש לא</button>
+          <button type="button" class="preset" data-on="30" data-off="30" data-i18n="form.cycle.presetMonth">חודש כן / חודש לא</button>
           <button type="button" class="preset" data-on="21" data-off="7">21 / 7</button>
-          <button type="button" class="preset" data-on="7" data-off="7">שבוע / שבוע</button>
+          <button type="button" class="preset" data-on="7" data-off="7" data-i18n="form.cycle.presetWeek">שבוע / שבוע</button>
         </div>
         <div class="field">
-          <label for="cycleRate">יחידות ביום (בימי הנטילה)</label>
+          <label for="cycleRate" data-i18n="form.cycleRate">יחידות ביום (בימי הנטילה)</label>
           <input type="number" id="cycleRate" name="cycleRate" step="0.5" min="0.5">
         </div>
         <div class="field-row">
           <div class="field">
-            <label for="cycleOnDays">ימים נוטלים</label>
+            <label for="cycleOnDays" data-i18n="form.cycleOnDays">ימים נוטלים</label>
             <input type="number" id="cycleOnDays" name="cycleOnDays" step="1" min="1">
           </div>
           <div class="field">
-            <label for="cycleOffDays">ימי הפסקה</label>
+            <label for="cycleOffDays" data-i18n="form.cycleOffDays">ימי הפסקה</label>
             <input type="number" id="cycleOffDays" name="cycleOffDays" step="1" min="1">
           </div>
         </div>
         <div class="field">
-          <label for="cycleStart">מתי התחילה תקופת הנטילה הנוכחית</label>
+          <label for="cycleStart" data-i18n="form.cycleStart">מתי התחילה תקופת הנטילה הנוכחית</label>
           <input type="date" id="cycleStart" name="cycleStart">
-          <p class="field-hint">בזכות התאריך הזה האפליקציה יודעת אם אתם כרגע בנטילה או בהפסקה, וסופרת ימים מדויקים</p>
+          <p class="field-hint" data-i18n="form.cycleStart.hint">בזכות התאריך הזה האפליקציה יודעת אם אתם כרגע בנטילה או בהפסקה, וסופרת ימים מדויקים</p>
         </div>
       </div>
       <div class="field-row">
         <div class="field">
-          <label for="currentBoxes">מלאי קופסאות נוכחי</label>
+          <label for="currentBoxes" data-i18n="form.currentBoxes">מלאי קופסאות נוכחי</label>
           <input type="number" id="currentBoxes" name="currentBoxes" step="any" min="0" required>
         </div>
         <div class="field">
-          <label for="currentStock">מלאי יחידות נוכחי</label>
+          <label for="currentStock" data-i18n="form.currentStock">מלאי יחידות נוכחי</label>
           <input type="number" id="currentStock" name="currentStock" step="any" min="0" required>
-          <p class="field-hint">מחושב אוטומטית לפי מספר הקופסאות — אפשר לתקן ידנית אם המלאי הנוכחי שונה</p>
+          <p class="field-hint" data-i18n="form.currentStock.hint">מחושב אוטומטית לפי מספר הקופסאות — אפשר לתקן ידנית אם המלאי הנוכחי שונה</p>
         </div>
       </div>
       <div class="field">
-        <label for="alertDays">להתריע כמה זמן לפני שהמלאי נגמר</label>
+        <label for="alertDays" data-i18n="form.alertDays">להתריע כמה זמן לפני שהמלאי נגמר</label>
         <select id="alertDays" name="alertDays">
-          <option value="7">שבוע</option>
-          <option value="14">שבועיים</option>
-          <option value="21">שלושה שבועות</option>
-          <option value="30">חודש</option>
-          <option value="60">חודשיים</option>
-          <option value="90">שלושה חודשים</option>
+          <option value="7" data-i18n="form.alertDays.7">שבוע</option>
+          <option value="14" data-i18n="form.alertDays.14">שבועיים</option>
+          <option value="21" data-i18n="form.alertDays.21">שלושה שבועות</option>
+          <option value="30" data-i18n="form.alertDays.30">חודש</option>
+          <option value="60" data-i18n="form.alertDays.60">חודשיים</option>
+          <option value="90" data-i18n="form.alertDays.90">שלושה חודשים</option>
         </select>
-        <p class="field-hint">הבחירה תישמר כברירת מחדל לתרופות הבאות שתוסיפו</p>
+        <p class="field-hint" data-i18n="form.alertDays.hint">הבחירה תישמר כברירת מחדל לתרופות הבאות שתוסיפו</p>
       </div>
       <div class="modal-actions">
-        <button type="button" id="cancelBtn" class="btn-secondary">ביטול</button>
-        <button type="submit" class="btn-primary">שמירה</button>
+        <button type="button" id="cancelBtn" class="btn-secondary" data-i18n="common.cancel">ביטול</button>
+        <button type="submit" class="btn-primary" data-i18n="common.save">שמירה</button>
       </div>
-      <button type="button" id="deleteBtn" class="btn-danger-text">מחיקת תרופה</button>
+      <button type="button" id="deleteBtn" class="btn-danger-text" data-i18n="form.delete">מחיקת תרופה</button>
     </form>
   </div>
 </div>
 
 <div id="receiveModalOverlay" class="modal-overlay">
   <div class="modal">
-    <h2>עדכון מלאי</h2>
+    <h2 data-i18n="receive.title">עדכון מלאי</h2>
     <form id="receiveForm">
       <p class="field-hint" id="receiveMedName" style="margin-bottom:14px;"></p>
       <div class="field">
-        <label for="receiveBoxes">כמה קופסאות חדשות התקבלו?</label>
-        <input type="number" id="receiveBoxes" name="receiveBoxes" step="1" min="1" required placeholder="לדוגמה: 2" autocomplete="off">
+        <label for="receiveBoxes" data-i18n="receive.boxes">כמה קופסאות חדשות התקבלו?</label>
+        <input type="number" id="receiveBoxes" name="receiveBoxes" step="1" min="1" required placeholder="לדוגמה: 2" data-i18n-placeholder="receive.boxes.placeholder" autocomplete="off">
       </div>
       <div class="modal-actions">
-        <button type="button" id="receiveCancelBtn" class="btn-secondary">ביטול</button>
-        <button type="submit" class="btn-primary">עדכון מלאי</button>
+        <button type="button" id="receiveCancelBtn" class="btn-secondary" data-i18n="common.cancel">ביטול</button>
+        <button type="submit" class="btn-primary" data-i18n="receive.title">עדכון מלאי</button>
       </div>
     </form>
   </div>
@@ -298,40 +318,43 @@
 
 <div id="settingsModalOverlay" class="modal-overlay">
   <div class="modal">
-    <h2>הגדרות</h2>
+    <h2 data-i18n="settings.title">הגדרות</h2>
 
     <div class="settings-group">
-      <p class="settings-label">כתובת המייל להזמנות</p>
+      <p class="settings-label" data-i18n="settings.email">כתובת המייל להזמנות</p>
       <p class="settings-value" id="settingsEmailValue"></p>
+      <!-- ⚠️ בלי data-i18n: openSettingsModal קובע את הטקסט לפי האם כבר
+           קיימת כתובת ("הזנת" מול "שינוי"), ו-applyStaticStrings היה דורס
+           את ההחלטה הזו בכל החלפת שפה. -->
       <button type="button" id="settingsEmailBtn" class="btn-secondary settings-action">שינוי כתובת</button>
     </div>
 
     <div class="settings-group">
-      <p class="settings-label">התראות</p>
+      <p class="settings-label" data-i18n="settings.notify">התראות</p>
       <label class="settings-choice">
         <input type="radio" name="notifyMode" value="background">
-        <strong id="notifyBackgroundTitle">גם ברקע, כשאפשר</strong>
+        <strong id="notifyBackgroundTitle" data-i18n="settings.notify.background">גם ברקע, כשאפשר</strong>
       </label>
       <label class="settings-choice">
         <input type="radio" name="notifyMode" value="onopen">
-        <strong>בפתיחת האפליקציה</strong>
+        <strong data-i18n="settings.notify.onOpen">בפתיחת האפליקציה</strong>
       </label>
       <label class="settings-choice">
         <input type="radio" name="notifyMode" value="off">
-        <strong>כבויות</strong>
+        <strong data-i18n="settings.notify.off">כבויות</strong>
       </label>
     </div>
 
     <div class="settings-group settings-group-last">
-      <p class="settings-label">גיבוי ושחזור</p>
-      <p class="settings-value">הנתונים נשמרים על המכשיר הזה בלבד. גיבוי מאפשר להעביר אותם למכשיר אחר, או לשחזר אחרי החלפת טלפון.</p>
-      <button type="button" id="exportBtn" class="btn-secondary settings-action">גיבוי הנתונים לקובץ</button>
-      <button type="button" id="importBtn" class="btn-secondary settings-action" style="margin-top:8px;">שחזור מקובץ גיבוי</button>
+      <p class="settings-label" data-i18n="settings.backup">גיבוי ושחזור</p>
+      <p class="settings-value" data-i18n="settings.backup.text">הנתונים נשמרים על המכשיר הזה בלבד. גיבוי מאפשר להעביר אותם למכשיר אחר, או לשחזר אחרי החלפת טלפון.</p>
+      <button type="button" id="exportBtn" class="btn-secondary settings-action" data-i18n="settings.backup.export">גיבוי הנתונים לקובץ</button>
+      <button type="button" id="importBtn" class="btn-secondary settings-action" style="margin-top:8px;" data-i18n="settings.backup.import">שחזור מקובץ גיבוי</button>
       <input type="file" id="importFile" accept="application/json,.json" hidden>
     </div>
 
     <div class="modal-actions">
-      <button type="button" id="settingsCloseBtn" class="btn-primary">סגירה</button>
+      <button type="button" id="settingsCloseBtn" class="btn-primary" data-i18n="common.close">סגירה</button>
     </div>
   </div>
 </div>
@@ -341,7 +364,7 @@
     <h2 id="confirmTitle">מחיקת תרופה</h2>
     <p class="field-hint" id="confirmText" style="margin-bottom:18px;">האם למחוק תרופה זו?</p>
     <div class="modal-actions">
-      <button type="button" id="confirmCancelBtn" class="btn-secondary">ביטול</button>
+      <button type="button" id="confirmCancelBtn" class="btn-secondary" data-i18n="common.cancel">ביטול</button>
       <button type="button" id="confirmOkBtn" class="btn-danger">מחיקה</button>
     </div>
   </div>
@@ -359,13 +382,13 @@
   <div class="modal">
     <h2 id="emailModalTitle">לאן לשלוח את הרשימה?</h2>
     <form id="emailForm">
-      <p class="field-hint" style="margin-bottom:14px;">הכתובת תישמר במכשיר הזה כדי שלא תצטרכו להזין אותה שוב</p>
+      <p class="field-hint" style="margin-bottom:14px;" data-i18n="email.hint">הכתובת תישמר במכשיר הזה כדי שלא תצטרכו להזין אותה שוב</p>
       <div class="field">
-        <label for="emailInput">כתובת מייל</label>
+        <label for="emailInput" data-i18n="email.address">כתובת מייל</label>
         <input type="email" id="emailInput" name="emailInput" required placeholder="name@example.com" autocomplete="email">
       </div>
       <div class="modal-actions">
-        <button type="button" id="emailCancelBtn" class="btn-secondary">ביטול</button>
+        <button type="button" id="emailCancelBtn" class="btn-secondary" data-i18n="common.cancel">ביטול</button>
         <button type="submit" id="emailSubmitBtn" class="btn-primary">שמירה ושליחה</button>
       </div>
     </form>
@@ -375,6 +398,8 @@
 <div class="toast" id="toast"></div>
 
 <script src="medications-db.js"></script>
+<!-- לפני app.js: applyLang() רץ בטעינה וקורא ל-t() ול-applyStaticStrings() -->
+<script src="i18n.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
