@@ -29,6 +29,58 @@
 // products (one was actually a veterinary drug) and were dropped; ~30 had
 // wrong/incomplete dose lists or spelling and were corrected; the rest were
 // confirmed accurate. See individual comments below for anything non-obvious.
+
+// נתוני אריזה לתרופות בטיפות ובתמיסות — טבלה ידנית, נפרדת מהרשימה.
+// היא יושבת כאן ולא בתוך הרשומות, כי רוב התרופות האלה בחלק הנוצר אוטומטית,
+// ועריכה שם נמחקת בהרצה הבאה של .claude/build-medications-db.js.
+// המפתח הוא בדיוק ה-he של הרשומה ב-MEDICATIONS_DB; הסקריפט מתריע אם מפתח
+// נשאר בלי רשומה (למשל כי בנייה מחדש שינתה תעתיק).
+//
+// כל הנתונים נלקחו מהעלון הישראלי הרשמי (מאגר התרופות של משרד הבריאות,
+// mohpublic.z6.web.core.windows.net/IsraelDrugs), אוקטובר 2026:
+//   bottleMl      — נפח בקבוקון במ״ל. תמיד מערך: לחלק מהתכשירים כמה גדלים.
+//   dropsPerMl    — רק כשהעלון מגדיר אותו במפורש. אין הגדרה → אין שדה.
+//                   אין להשלים כאן "20" כהערכה כללית: בקסאלטן זה 32.
+//   useWithinDays — תוקף אחרי פתיחה, בימים (חודש=30, 4 שבועות=28).
+//   dose          — לרשומה שמערבבת טבליות ונוזל: העוצמה שהנתונים חלים עליה.
+// עדיין לא בשימוש באפליקציה. שום דבר כאן אינו הוראת נטילה.
+//
+// לא נכללה "טיפת טיפות ויטמין D (כצט)": אינה רשומה במאגר התרופות (ככל הנראה
+// תוסף תזונה), ולכן אין לה עלון רשמי לאמת מולו.
+const DROP_PACKS = {
+  // טיפות עיניים
+  'איופידין':  { bottleMl: [5], useWithinDays: 28 },
+  // העלון מונה 5/10/15 ומציין "ייתכן שלא כל הגדלים משווקים"; ברקוד רשום רק ל-5
+  'אלפאגן פי': { bottleMl: [5, 10, 15], useWithinDays: 28 },
+  'וי-אופטיק': { bottleMl: [5], useWithinDays: 30 },
+  'ויזולטה':   { bottleMl: [5], useWithinDays: 56 },
+  'טרבתן':     { bottleMl: [2.5], useWithinDays: 28 },
+  // הנפח מהמאגר — העלון (2015) לא מציין אותו
+  'לייטירס':   { bottleMl: [15], useWithinDays: 30 },
+  'דורזופט':   { bottleMl: [5], useWithinDays: 28 },
+  'לתרו':      { bottleMl: [2.5], useWithinDays: 28 },
+  // עלון לרופא: "2.5 mL corresponding to approximately 80 drops" → כ-32 למ״ל
+  'קסאלטן':    { bottleMl: [2.5], dropsPerMl: 32, useWithinDays: 28 },
+  'וי-טירס':   { bottleMl: [15], useWithinDays: 30 },
+  // איקון אינה בקבוקון: אמפולות חד-פעמיות של 0.65 מ״ל, 20 או 30 באריזה.
+  // אמפולה פתוחה — 12 שעות; useWithinDays הוא לשקית האלומיניום אחרי פתיחה
+  'איקון':     { ampouleMl: 0.65, ampoulesPerBox: [20, 30], useWithinDays: 28 },
+
+  // דרך הפה
+  // תרחיף שנמדד במ״ל במזרק, לא בטיפות — ולכן אין dropsPerMl.
+  // 15 מ״ל: 6 חודשים אחרי פתיחה; 50 מ״ל: עד התפוגה — לכן בלי useWithinDays
+  'נובימול':   { bottleMl: [15, 50] },
+  // עלון לצרכן: "כל 1 מ״ל (20 טיפות)"
+  'וי-דלגין':  { bottleMl: [10], dropsPerMl: 20, useWithinDays: 180 },
+  // עלון לצרכן: "כל 1 מ״ל (20 טיפות)"; ברקוד רשום רק ל-30 מ״ל
+  'הלדול':     { dose: '2 מ״ג/מ״ל', bottleMl: [15, 30], dropsPerMl: 20, useWithinDays: 90 },
+  // עלון: "1 טיפה = 1 מ״ג" בריכוז 20 מ״ג/מ״ל → 20 טיפות למ״ל
+  'קלופיקסול': { dose: '20 מ״ג/מ״ל', bottleMl: [20], dropsPerMl: 20, useWithinDays: 42 },
+  // עלון לצרכן: "כל 1 מ״ל (20 טיפות)"; אצל מבוגרים המינון במ״ל, טיפות לילדים
+  'מוקולס':    { dose: '2 מ״ג/מ״ל', bottleMl: [50], dropsPerMl: 20, useWithinDays: 120 },
+  'מווקס':     { dose: '2 מ״ג/מ״ל', bottleMl: [50], dropsPerMl: 20, useWithinDays: 120 },
+};
+
 const MEDICATIONS_DB = [
   // סוכרת — תרופות
   // גלוקופאז' (Glucophage) — לפי בדיקה, הופסק משיווק בישראל (Clalit: "הופסק

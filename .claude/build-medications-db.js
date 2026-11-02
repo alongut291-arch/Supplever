@@ -554,6 +554,15 @@ async function main() {
   process.stderr.write('מועמדים: ' + candidates.length + ' · חדשים אפשריים: ' + pool.length + '\n');
   process.stderr.write('ידניות ' + curated.length + ' + חדשות ' + chosen.length + ' = ' + (curated.length + chosen.length) + '\n');
 
+  /* DROP_PACKS (בראש medications-db.js) מתאים לרשומות לפי השם העברי. בנייה מחדש
+     שמשנה תעתיק תנתק אותו בשקט — לכן מתריעים על כל מפתח שנשאר בלי רשומה. */
+  const packsBlock = (curatedPart.match(/const DROP_PACKS = \{([\s\S]*?)\n\};/) || [])[1] || '';
+  const packKeys = [...packsBlock.matchAll(/^\s*'([^']+)':\s*\{/gm)].map((m) => m[1]);
+  const allHe = new Set([...curated.map((c) => c.he), ...chosen.map((c) => c.he)]);
+  packKeys.filter((k) => !allHe.has(k)).forEach((k) => {
+    process.stderr.write('⚠️  DROP_PACKS: אין רשומה בשם "' + k + '" — לעדכן את המפתח\n');
+  });
+
   if (dryRun) {
     [...perBucket.keys()].forEach((b) => {
       const n = chosen.filter((c) => c.bucket === b).length;
