@@ -155,12 +155,8 @@
     <div id="cartListPending" class="med-list"></div>
 
     <div id="cartActions" class="cart-actions" style="display:none;">
-      <button type="button" id="sendOrderBtn" class="send-order-btn" data-i18n="cart.sendEmail">שליחה במייל</button>
-      <!-- שורת "תישלח אל <כתובת> · שינוי" נוגעת למייל בלבד, ולכן היא יושבת
-           בין שני הכפתורים ולא מתחת לשניהם. -->
-      <p id="sendEmailInfo" class="cart-send-info"></p>
-      <!-- וואטסאפ לא צריך שום כתובת: בורר אנשי הקשר נפתח בתוך וואטסאפ. -->
-      <button type="button" id="sendWhatsappBtn" class="send-whatsapp-btn" data-i18n="cart.sendWhatsapp">שליחה בוואטסאפ</button>
+      <!-- פעולה אחת ברורה. בחירת הערוץ היא שלב שני, ב-#sendChoiceOverlay. -->
+      <button type="button" id="sendOrderBtn" class="send-order-btn" data-i18n="cart.send">שליחת רשימת ההזמנות</button>
     </div>
 
     <p id="cartSentLabel" class="section-label sent" hidden><span data-i18n="cart.label.sent">כבר נשלחה הזמנה</span> <span id="cartSentCount" class="count"></span></p>
@@ -399,6 +395,22 @@
         <button type="submit" id="emailSubmitBtn" class="btn-primary">שמירה ושליחה</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- בחירת ערוץ השליחה. שני הכפתורים ישבו קודם בטאב עצמו; הם עברו לכאן
+     כדי שהטאב יציג פעולה אחת, והבחירה תיעשה רק אחרי שהמשתמש החליט לשלוח.
+     שורת "תישלח אל …" עברה איתם, כי היא נוגעת למייל בלבד. -->
+<div id="sendChoiceOverlay" class="modal-overlay">
+  <div class="modal">
+    <h2 data-i18n="cart.sendTitle">איך לשלוח את הרשימה?</h2>
+    <button type="button" id="sendChoiceEmailBtn" class="send-order-btn" data-i18n="cart.sendEmail">שליחה במייל</button>
+    <p id="sendEmailInfo" class="cart-send-info"></p>
+    <!-- וואטסאפ לא צריך שום כתובת: בורר אנשי הקשר נפתח בתוך וואטסאפ. -->
+    <button type="button" id="sendChoiceWhatsappBtn" class="send-whatsapp-btn" data-i18n="cart.sendWhatsapp">שליחה בוואטסאפ</button>
+    <div class="modal-actions">
+      <button type="button" id="sendChoiceCancelBtn" class="btn-secondary" data-i18n="common.cancel">ביטול</button>
+    </div>
   </div>
 </div>
 

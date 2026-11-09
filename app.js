@@ -391,18 +391,39 @@ function medNamePair(med) {
   return `${entry.he} / ${entry.en}`;
 }
 
-/* בלוק אחד לכל תרופה בגוף המייל. mailto: מעביר טקסט פשוט בלבד — אין HTML,
-   ולכן אין טבלה אמיתית. בלוק ממוספר נקרא נכון בכל אפליקציית מייל ובכל רוחב
-   מסך, בלי להישבר על ערבוב עברית-אנגלית כמו שעמודות מיושרות היו נשברות. */
-function cartItemBlock(med, index) {
+/* ⚠️ U+200F — RIGHT-TO-LEFT MARK. תו בלתי נראה שמקבע שורה לימין.
+
+   בטקסט פשוט (וואטסאפ, מייל) הכיוון של כל שורה נקבע לפי **התו ה"חזק"
+   הראשון בה**, ולא לפי שפת האפליקציה. שורה כמו "1. Prograf · כמות: 2
+   קופסאות" מתחילה בספרה (תו חלש) ואחריה אותיות לטיניות — ולכן היא נחשבת
+   שורה באנגלית ונצמדת לשמאל, בעוד השורות שלידה בעברית נצמדות לימין.
+   זה קרה בפועל בנובמבר 2026 עם תרופה שהוקלדה כטקסט חופשי לטיני.
+
+   ה-RLM בתחילת השורה הוא תו חזק RTL, ולכן הוא קובע את הכיוון לפני שהספרה
+   או השם מספיקים להשפיע. **רק בשפות RTL** — בשפה לטינית הוא היה הופך
+   את השורה לאחור. */
+const RLM = '\u200F';
+
+function dirMark() {
+  return LANG_DIR[activeLang()] === 'rtl' ? RLM : '';
+}
+
+/* שורה אחת לכל תרופה, בטקסט פשוט (אין HTML ב-mailto ובוואטסאפ).
+
+   ⚠️ **שורה אחת ולא בלוק מוזח.** עד נובמבר 2026 זה היה שלוש שורות, והמינון
+   והכמות הוזחו בשלושה רווחים. בבועה של וואטסאפ זה נראה שבור: ההזחה נקראת
+   כרווח אקראי, וכל שורה נוספת היא עוד הזדמנות שהכיוון שלה ייקבע אחרת מזו
+   שמעליה. שורה אחת עם מפרידי "·" היא גם בדיוק מה שהמשתמש רואה בטאב
+   "רשימת ההזמנות" עצמו, ולכן ההודעה נראית כמו הרשימה שממנה היא נבנתה. */
+function cartItemLine(med, index) {
   const qtyText = med.orderSnapshotBoxes
     ? boxesLabel(med.orderSnapshotBoxes)
     : t('common.approxUnits', { n: med.orderSnapshotPills || 0 });
 
-  const lines = [`${index + 1}. ${medNamePair(med)}`];
-  if (med.dose) lines.push(`   ${t('email.doseLabel')} ${localizeDose(med.dose)}`);   // המינון הוא שדה אופציונלי
-  lines.push(`   ${t('email.qtyLabel')} ${qtyText}`);
-  return lines.join('\n');
+  const parts = [`${index + 1}. ${medNamePair(med)}`];
+  if (med.dose) parts.push(`${t('email.doseLabel')} ${localizeDose(med.dose)}`);   // המינון הוא שדה אופציונלי
+  parts.push(`${t('email.qtyLabel')} ${qtyText}`);
+  return dirMark() + parts.join(' · ');
 }
 
 function todayStr() {
@@ -645,6 +666,7 @@ let dialogHistoryEntries = 0;
 
 function anyDialogOpen() {
   return choiceOverlay.classList.contains('open')
+    || sendChoiceOverlay.classList.contains('open')
     || overlay.classList.contains('open')
     || receiveOverlay.classList.contains('open')
     || emailOverlay.classList.contains('open')
@@ -691,6 +713,7 @@ window.addEventListener('popstate', () => {
   closeReceiveModal(true);
   closeEmailModal(true);
   closeSettingsModal(true);
+  closeSendChoice(true);
 });
 
 /* ---------- בורר האפשרויות שלנו ----------
@@ -1582,14 +1605,66 @@ function updateSendEmailInfo() {
     : '';
 }
 
-/* המייל כולו נבנה בשפת האפליקציה — נושא, פתיחה, תוויות הבלוקים וחתימה.
-   חצי מייל מתורגם גרוע יותר ממייל שלא תורגם בכלל: בית המרקחת מקבל טקסט
-   שמחצית ממנו הוא בשפה שהוא לא ציפה לה, ובכיוון כתיבה הפוך. */
-function buildOrderMailto(toEmail, cartMeds) {
+/* ---------- גוף ההודעה: השפה הנבחרת, ועברית לידה ----------
+
+   ⚠️ **זה מחליף נימוק קודם שהיה כאן והיה שגוי.** עד נובמבר 2026 ההודעה
+   נבנתה בשפת האפליקציה **בלבד**, בנימוק ש"חצי מייל מתורגם גרוע ממייל שלא
+   תורגם". הנימוק ההוא נפל על עובדה אחת: **מי שמקבל את ההודעה בישראל קורא
+   עברית** — בית מרקחת, בן משפחה, שליח — גם כשהמשתמש בחר רוסית.
+
+   ומה שמפיל אותו סופית הוא שזו **אינה** תערובת. ההודעה נושאת שתי גרסאות
+   **שלמות**, כל אחת עם הפתיחה, הרשימה והחתימה שלה, מופרדות בקו. אף קורא
+   אינו נתקל בחצי משפט בשפה שאינה שלו.
+
+   **הסדר: השפה הנבחרת תחילה, עברית אחריה.** המשתמש הוא זה שלוחץ "שלח",
+   והמייל בכלל נשלח **לכתובת שלו** — הודעה שנפתחת בשפה שאינה שלו נראית לו
+   שבורה. העברית היא הגרסה שתימסר הלאה, ולכן היא שנייה ולא ראשונה.
+
+   **בעברית אין כפילות** — גרסה אחת, בדיוק כמו קודם. */
+
+/* מפריד בין הגרסאות. אינו מחרוזת מתורגמת — סימני פיסוק זהים בארבע השפות.
+
+   ⚠️ **ונושא RLM כמו שורת תרופה.** כל תוויו ניטרליים מבחינת כיווניות, ולכן
+   בלעדיו הוא נפתר כ-LTR ונצמד לשמאל — גם בבועה ערבית שכולה מימין, שם הוא
+   נראה כמו פליטה. הוא מקדים תמיד את הבלוק העברי, ולכן מקבל את כיוונו:
+   בערבית הוא מתיישר עם השאר, וברוסית הוא מסמן בדיוק את הנקודה שבה הכיוון
+   מתהפך. */
+const LANG_BLOCK_SEP = RLM + '— — —';
+
+/* גרסה אחת שלמה, בשפה שפעילה **ברגע הקריאה** (ראו withLang ב-i18n.js).
+   הפתיחה היא למייל בלבד: בבועת וואטסאפ אל בן משפחה "שלום רב," נקרא מוזר. */
+function orderBlock(cartMeds, withGreeting) {
+  const parts = [];
+  if (withGreeting) parts.push(t('email.greeting'));
+  parts.push(t('email.intro'));
+  // שורה לכל תרופה, ולכן \n בין תרופות ו-\n\n רק בין חלקי ההודעה
+  parts.push(cartMeds.map(cartItemLine).join('\n'));
+  parts.push(t('email.signature'));
+  return parts.join('\n\n');
+}
+
+/* ⚠️ החתימה חוזרת בשני הבלוקים, בכוונה. בלוק שלם שנקרא מתחילתו ועד סופו
+   הוא כל העניין כאן, ו"נשלח מתוך Supplever" הוא מה שמסביר לכל קורא מאיפה
+   ההודעה הגיעה. חתימה אחת בתחתית הייתה נקראת כשייכת לבלוק העברי בלבד. */
+function orderBody(cartMeds, withGreeting) {
+  const lang = activeLang();
+  const blocks = [orderBlock(cartMeds, withGreeting)];   // השפה הנבחרת כבר פעילה
+  if (lang !== 'he') blocks.push(withLang('he', () => orderBlock(cartMeds, withGreeting)));
+  return blocks.join(`\n\n${LANG_BLOCK_SEP}\n\n`);
+}
+
+/* הנושא נושא את שתי השפות בשורה אחת — הוא מה שנראה בתיבת הדואר לפני
+   שפותחים, ולכן גם הוא צריך להיות קריא למי שקורא עברית. */
+function orderSubject() {
   const subject = t('email.subject');
-  const blocks = cartMeds.map(cartItemBlock).join('\n\n');
-  const body = `${t('email.greeting')}\n\n${t('email.intro')}\n\n${blocks}\n\n${t('email.signature')}`;
-  return `mailto:${toEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  if (activeLang() === 'he') return subject;
+  return `${subject} / ${withLang('he', () => t('email.subject'))}`;
+}
+
+function buildOrderMailto(toEmail, cartMeds) {
+  const subject = encodeURIComponent(orderSubject());
+  const body = encodeURIComponent(orderBody(cartMeds, true));
+  return `mailto:${toEmail}?subject=${subject}&body=${body}`;
 }
 
 function sendOrderListByEmail(cartMeds) {
@@ -1607,28 +1682,62 @@ function medsPendingSend() {
   return loadMeds().filter(med => med.inOrder && !med.orderSentDate);
 }
 
-function handleSendOrderClick() {
-  const cartMeds = medsPendingSend();
-  if (cartMeds.length === 0) return;
-  if (getUserEmail()) {
-    sendOrderListByEmail(cartMeds);
-  } else {
-    openEmailModal('send');
-  }
+/* ---------- בחירת ערוץ השליחה ---------- */
+
+const sendChoiceOverlay = document.getElementById('sendChoiceOverlay');
+
+function openSendChoice() {
+  if (medsPendingSend().length === 0) return;
+  if (sendChoiceOverlay.classList.contains('open')) return;   // לחיצה כפולה
+  updateSendEmailInfo();
+  sendChoiceOverlay.classList.add('open');
+  registerDialogOpen();
 }
 
-document.getElementById('sendOrderBtn').addEventListener('click', handleSendOrderClick);
+function closeSendChoice(fromBackButton = false) {
+  if (!sendChoiceOverlay.classList.contains('open')) return;
+  sendChoiceOverlay.classList.remove('open');
+  if (!fromBackButton) registerDialogClose();
+}
+
+/* מחליף חלון בחלון בלי לגעת בהיסטוריה — הרשומה של חלון הבחירה עוברת לחלון
+   המייל, וסגירתו תוציא אותה. אסור לסגור-ואז-לפתוח: history.back() אסינכרוני,
+   ו-pushState שרץ אחריו באותו tick מתחרה בו. אותו דפוס כמו הגדרות -> שינוי
+   כתובת. */
+function handOverToEmailModal(mode) {
+  sendChoiceOverlay.classList.remove('open');
+  openEmailModal(mode, true);
+}
+
+document.getElementById('sendOrderBtn').addEventListener('click', openSendChoice);
+document.getElementById('sendChoiceCancelBtn').addEventListener('click', () => closeSendChoice());
+sendChoiceOverlay.addEventListener('click', (e) => {
+  if (e.target === sendChoiceOverlay) closeSendChoice();
+});
+
+document.getElementById('sendChoiceEmailBtn').addEventListener('click', () => {
+  const cartMeds = medsPendingSend();
+  if (cartMeds.length === 0) return;
+  /* בלי כתובת שמורה צריך קודם לקלוט אותה, ואז החלון ההוא שולח בעצמו. */
+  if (!getUserEmail()) { handOverToEmailModal('send'); return; }
+  closeSendChoice();
+  sendOrderListByEmail(cartMeds);
+});
+
+/* "שינוי" יושב בתוך שורת הכתובת, שנמצאת היום בחלון הזה ולא בטאב. */
+sendChoiceOverlay.addEventListener('click', (e) => {
+  if (e.target.closest('#changeEmailBtn')) handOverToEmailModal('edit');
+});
 
 /* ---------- send order list by WhatsApp ---------- */
 
-/* אותו טקסט של המייל ומאותה פונקציה (cartItemBlock) — שתי גרסאות של אותה
-   רשימה היו נפרדות בשקט אחרי התיקון הראשון שייעשה רק באחת מהן.
+/* אותו גוף בדיוק של המייל, מאותה פונקציה (orderBody) — ולכן גם הוא דו-לשוני
+   בשפה שאינה עברית. שתי גרסאות של אותה רשימה היו נפרדות בשקט אחרי התיקון
+   הראשון שייעשה רק באחת מהן.
    מה שכן יורד: "שלום רב," ונושא ההודעה. בבועת וואטסאפ אל בן משפחה פתיחה
-   רשמית נקראת מוזר, ולהודעת וואטסאפ אין נושא בכלל. החתימה נשארת — היא
-   מסבירה למי שמקבל את ההודעה מאיפה היא הגיעה. */
+   רשמית נקראת מוזר, ולהודעת וואטסאפ אין נושא בכלל. */
 function buildOrderWhatsappText(cartMeds) {
-  const blocks = cartMeds.map(cartItemBlock).join('\n\n');
-  return `${t('email.intro')}\n\n${blocks}\n\n${t('email.signature')}`;
+  return orderBody(cartMeds, false);
 }
 
 /* בלי מספר טלפון בכתובת — וואטסאפ פותח את בורר אנשי הקשר והמשתמש בוחר למי
@@ -1666,11 +1775,11 @@ function sendOrderListByWhatsapp(cartMeds) {
 }
 
 /* בלי חלון קליטת כתובת, בשונה מהמייל — אין מה לקלוט. */
-document.getElementById('sendWhatsappBtn').addEventListener('click', () => {
-  sendOrderListByWhatsapp(medsPendingSend());
-});
-cartActionsEl.addEventListener('click', (e) => {
-  if (e.target.closest('#changeEmailBtn')) openEmailModal('edit');
+document.getElementById('sendChoiceWhatsappBtn').addEventListener('click', () => {
+  const cartMeds = medsPendingSend();
+  if (cartMeds.length === 0) return;
+  closeSendChoice();
+  sendOrderListByWhatsapp(cartMeds);
 });
 
 const emailOverlay = document.getElementById('emailModalOverlay');

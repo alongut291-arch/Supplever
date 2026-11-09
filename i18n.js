@@ -77,6 +77,8 @@ const STRINGS = {
   'orders.label.added':          'כבר ברשימת ההזמנות',
   'cart.label.pending':          'טרם נשלחה הזמנה',
   'cart.label.sent':             'כבר נשלחה הזמנה',
+  'cart.send':                   'שליחת רשימת ההזמנות',
+  'cart.sendTitle':              'איך לשלוח את הרשימה?',
   'cart.sendEmail':              'שליחה במייל',
   'cart.sendWhatsapp':           'שליחה בוואטסאפ',
 
@@ -313,6 +315,8 @@ const STRINGS = {
   'orders.label.added':          'Already on the order list',
   'cart.label.pending':          'Not yet ordered',
   'cart.label.sent':             'Already ordered',
+  'cart.send':                   'Send order list',
+  'cart.sendTitle':              'How should the list be sent?',
   'cart.sendEmail':              'Send by email',
   'cart.sendWhatsapp':           'Send via WhatsApp',
 
@@ -562,6 +566,8 @@ const STRINGS = {
   'orders.label.added':          'مُضافة إلى قائمة الطلبات',
   'cart.label.pending':          'لم تُطلب بعد',
   'cart.label.sent':             'تم طلبها',
+  'cart.send':                   'إرسال قائمة الطلبات',
+  'cart.sendTitle':              'كيف نرسل القائمة؟',
   'cart.sendEmail':              'إرسال بالبريد الإلكتروني',
   'cart.sendWhatsapp':           'إرسال عبر واتساب',
 
@@ -958,6 +964,8 @@ const STRINGS = {
   'orders.label.added':          'Уже в списке заказов',
   'cart.label.pending':          'Заказ ещё не отправлен',
   'cart.label.sent':             'Заказ уже отправлен',
+  'cart.send':                   'Отправить список заказов',
+  'cart.sendTitle':              'Как отправить список?',
   'cart.sendEmail':              'Отправить по e-mail',
   'cart.sendWhatsapp':           'Отправить в WhatsApp',
 
@@ -1161,6 +1169,24 @@ const STRINGS = {
 function activeLang() {
   const lang = document.documentElement.lang;
   return STRINGS[lang] ? lang : 'he';
+}
+
+/* מריץ fn כאילו שפת האפליקציה היא `lang`, ומחזיר את השפה הקודמת בסוף.
+
+   כל מחרוזת מול משתמש עוברת דרך activeLang(), שקוראת את documentElement.lang
+   — וכך גם medNamePair() ו-localizeDose() ב-app.js. לכן זו הדרך היחידה לבנות
+   טקסט בשפה שאינה הנבחרת בלי לשכפל את שלושתן לגרסה שמקבלת שפה כפרמטר.
+
+   ⚠️ **סינכרוני בהכרח.** הדפדפן אינו מצייר בתוך הפונקציה, אין MutationObserver
+   על התכונה ואין `:lang()` ב-CSS, ולכן ההחלפה הזמנית אינה נראית. fn שתחזיר
+   Promise תמשיך לרוץ אחרי שהשפה כבר הוחזרה, וקבלת מחרוזות שם תהיה שגויה.
+   ⚠️ **ו-finally נדרש** — חריגה באמצע הייתה משאירה את כל האפליקציה בשפה
+   הזמנית, בלי שום אינדיקציה למה. */
+function withLang(lang, fn) {
+  const prev = document.documentElement.lang;
+  document.documentElement.lang = lang;
+  try { return fn(); }
+  finally { document.documentElement.lang = prev; }
 }
 
 function t(key, vars) {
