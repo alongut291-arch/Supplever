@@ -314,7 +314,8 @@ function medCardHTML(med, extraHTML = '', showReceiveBtn = true) {
           <span class="status-dot status-${status}"></span>
           <div>
             <p class="med-name" dir="auto">${escapeHtml(med.name)}</p>
-            <p class="med-dose">${escapeHtml(localizeDose(med.dose || ''))}${med.dose ? ' · ' : ''}${freqText(med)}</p>
+            <!-- bdi ולא span: בלעדיו "2.5 mg" מוצג בערבית כ-"mg 2.5". ראו isolate() -->
+            <p class="med-dose">${med.dose ? `<bdi>${escapeHtml(localizeDose(med.dose))}</bdi> · ` : ''}${freqText(med)}</p>
             ${cycleChipHTML(med)}
           </div>
         </div>
@@ -408,6 +409,27 @@ function dirMark() {
   return LANG_DIR[activeLang()] === 'rtl' ? RLM : '';
 }
 
+/* ⚠️ U+2068 FIRST STRONG ISOLATE ו-U+2069 POP DIRECTIONAL ISOLATE — המקבילה
+   בטקסט פשוט ל-`<bdi>` ב-HTML.
+
+   באג אמיתי שנמדד בנובמבר 2026: בערבית `2.5 mg (أمبولة واحدة)` **מוצג
+   כ-`mg 2.5`**. הסיבה אינה המילה הערבית אלא **הרווח**: בשורה RTL הרווח
+   שבין `2.5` (ספרה) לבין `mg` (לטינית) נפתר ככיוון הפסקה, ולכן הוא
+   מפצל את "2.5 mg" לשני איים נפרדים — ואז הם מסתדרים מימין לשמאל.
+   אותו דבר ב-`100 mcg/بخة` שמוצג `mcg 100`.
+
+   ⚠️ **והבאג קדם לפיצול יחידות המינון** — גם קודם ערבית קיבלה `mg`, כלומר
+   הוא חי באתר מאז שנוספה ערבית. הוא נתפס רק כשנמדד מיקום כל חלק על המסך,
+   ולא נראה בעין.
+
+   ⚠️ **ורק ב-RTL.** בשפה לטינית אין כאן אי הפוך, והתו היה מיותר — ותו בקרה
+   מיותר בהודעת וואטסאפ הוא בדיוק מה שלקוח ישן עלול להציג כריבוע. */
+const FSI = '\u2068', PDI = '\u2069';
+
+function isolate(text) {
+  return LANG_DIR[activeLang()] === 'rtl' ? FSI + text + PDI : text;
+}
+
 /* שורה אחת לכל תרופה, בטקסט פשוט (אין HTML ב-mailto ובוואטסאפ).
 
    ⚠️ **שורה אחת ולא בלוק מוזח.** עד נובמבר 2026 זה היה שלוש שורות, והמינון
@@ -421,7 +443,8 @@ function cartItemLine(med, index) {
     : t('common.approxUnits', { n: med.orderSnapshotPills || 0 });
 
   const parts = [`${index + 1}. ${medNamePair(med)}`];
-  if (med.dose) parts.push(`${t('email.doseLabel')} ${localizeDose(med.dose)}`);   // המינון הוא שדה אופציונלי
+  // isolate() ולא רק על ה-dose: התווית ערבית ונשארת בכיוון הפסקה, המינון לא
+  if (med.dose) parts.push(`${t('email.doseLabel')} ${isolate(localizeDose(med.dose))}`);   // המינון הוא שדה אופציונלי
   parts.push(`${t('email.qtyLabel')} ${qtyText}`);
   return dirMark() + parts.join(' · ');
 }
@@ -754,6 +777,10 @@ function openChoiceDialog(select) {
     radio.className = 'choice-radio';
     const label = document.createElement('span');
     label.className = 'choice-label';
+    /* dir="auto" מבודד כל אפשרות לכיוון שלה. נדרש לבוחר המינון, שבו
+       "2.5 mg (أمبولة واحدة)" היה מוצג בערבית כ-"mg 2.5"; ומועיל גם
+       לבורר השפות, שבו כל שם שפה נכתב בכתב שלו. */
+    label.dir = 'auto';
     label.textContent = opt.textContent;
 
     item.append(radio, label);
