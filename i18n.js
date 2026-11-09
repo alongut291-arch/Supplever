@@ -77,7 +77,8 @@ const STRINGS = {
   'orders.label.added':          'כבר ברשימת ההזמנות',
   'cart.label.pending':          'טרם נשלחה הזמנה',
   'cart.label.sent':             'כבר נשלחה הזמנה',
-  'cart.send':                   'שליחת רשימת ההזמנות',
+  'cart.sendEmail':              'שליחה במייל',
+  'cart.sendWhatsapp':           'שליחה בוואטסאפ',
 
   /* add / edit medicine form */
   'form.name':                   'שם התרופה',
@@ -188,8 +189,8 @@ const STRINGS = {
   'order.months.3':            '3 חודשים',
   'order.planPrefix':          'להזמין מלאי ל-',
   'order.planSuffix':          'קדימה',
-  'order.qtyWithBoxes':        'כמות להזמנה: {boxes} (כ-{pills} יחידות)',
-  'order.qtyUnitsOnly':        'כמות להזמנה: כ-{pills} יחידות',
+  'order.qtyWithBoxes': (v) => `כמות להזמנה: ${v.boxes} (${v.pills === 1 ? 'יחידה אחת' : `${v.pills} יחידות`})`,
+  'order.qtyUnitsOnly': (v) => `כמות להזמנה: ${v.pills === 1 ? 'יחידה אחת' : `${v.pills} יחידות`}`,
   'order.inListRemove':        '✓ ברשימת ההזמנות — הסר',
   'order.add':                 '+ הוסף להזמנה',
   'order.sentToday':           'נשלחה היום',
@@ -197,10 +198,10 @@ const STRINGS = {
   'order.sentAgo':             'נשלחה לפני {days} ימים',
 
   /* רשימת ההזמנות */
-  'cart.qtyWithBoxes':         '{boxes} להזמנה (כ-{pills} יחידות)',
-  'cart.qtyUnitsOnly':         'כ-{pills} יחידות להזמנה',
+  'cart.qtyWithBoxes': (v) => `${v.boxes} להזמנה (${v.pills === 1 ? 'יחידה אחת' : `${v.pills} יחידות`})`,
+  'cart.qtyUnitsOnly': (v) => `${v.pills === 1 ? 'יחידה אחת' : `${v.pills} יחידות`} להזמנה`,
   'cart.receive':              'ההזמנה הגיעה — עדכון מלאי',
-  'cart.removeAria':           'הסר מרשימת ההזמנה',
+  'cart.removeAria':           'הסר מרשימת ההזמנות',
 
   /* משותף */
   'common.ok':                 'אישור',
@@ -210,7 +211,7 @@ const STRINGS = {
   'common.chooseDose':         'בחרו מינון...',
   'common.doseOther':          'אחר (הזנה ידנית)',
   'common.boxes': (v) => v.n === 1 ? 'קופסה אחת' : `${v.n} קופסאות`,
-  'common.approxUnits': (v) => `כ-${v.n} יחידות`,
+  'common.approxUnits': (v) => v.n === 1 ? 'יחידה אחת' : `${v.n} יחידות`,
 
   /* בדיקת הטופס */
   'validation.name':           'יש להזין שם',
@@ -221,10 +222,11 @@ const STRINGS = {
   'toast.medAdded':            'התרופה נוספה בהצלחה',
   'toast.medUpdated':          'התרופה עודכנה',
   'toast.medDeleted':          'התרופה נמחקה',
-  'toast.addedToOrder':        'נוספה לרשימת ההזמנה',
-  'toast.removedFromOrder':    'הוסרה מרשימת ההזמנה',
+  'toast.addedToOrder':        'נוספה לרשימת ההזמנות',
+  'toast.removedFromOrder':    'הוסרה מרשימת ההזמנות',
   'toast.stockUpdated':        'המלאי עודכן',
   'toast.mailOpened':          'נפתח מייל אל {email}',
+  'toast.whatsappOpened':      'נפתח וואטסאפ עם הרשימה',
   'toast.emailUpdated':        'כתובת המייל עודכנה',
   'toast.notifyOn':            'התראות הופעלו',
   'toast.notifyOff':           'ההתראות כובו',
@@ -311,7 +313,8 @@ const STRINGS = {
   'orders.label.added':          'Already on the order list',
   'cart.label.pending':          'Not yet ordered',
   'cart.label.sent':             'Already ordered',
-  'cart.send':                   'Send order list',
+  'cart.sendEmail':              'Send by email',
+  'cart.sendWhatsapp':           'Send via WhatsApp',
 
   /* add / edit medicine form */
   'form.name':                   'Medicine name',
@@ -418,16 +421,16 @@ const STRINGS = {
   'order.months.3':            '3 months',
   'order.planPrefix':          'Order enough for',
   'order.planSuffix':          'ahead',
-  'order.qtyWithBoxes':        'To order: {boxes} (about {pills} units)',
-  'order.qtyUnitsOnly':        'To order: about {pills} units',
+  'order.qtyWithBoxes': (v) => `To order: ${v.boxes} (${v.pills === 1 ? '1 unit' : `${v.pills} units`})`,
+  'order.qtyUnitsOnly': (v) => `To order: ${v.pills === 1 ? '1 unit' : `${v.pills} units`}`,
   'order.inListRemove':        '✓ In order list — remove',
   'order.add':                 '+ Add to order',
   'order.sentToday':           'Sent today',
   'order.sentYesterday':       'Sent yesterday',
   'order.sentAgo':             'Sent {days} days ago',
 
-  'cart.qtyWithBoxes':         '{boxes} to order (about {pills} units)',
-  'cart.qtyUnitsOnly':         'about {pills} units to order',
+  'cart.qtyWithBoxes': (v) => `${v.boxes} to order (${v.pills === 1 ? '1 unit' : `${v.pills} units`})`,
+  'cart.qtyUnitsOnly': (v) => `${v.pills === 1 ? '1 unit' : `${v.pills} units`} to order`,
   'cart.receive':              'Order arrived — update stock',
   'cart.removeAria':           'Remove from order list',
 
@@ -438,7 +441,7 @@ const STRINGS = {
   'common.chooseDose':         'Choose a dose...',
   'common.doseOther':          'Other (type it in)',
   'common.boxes': (v) => v.n === 1 ? '1 box' : `${v.n} boxes`,
-  'common.approxUnits': (v) => v.n === 1 ? 'about 1 unit' : `about ${v.n} units`,
+  'common.approxUnits': (v) => v.n === 1 ? '1 unit' : `${v.n} units`,
 
   'validation.name':           'Enter a name',
   'validation.positive':       'Enter a number greater than zero',
@@ -451,6 +454,7 @@ const STRINGS = {
   'toast.removedFromOrder':    'Removed from the order list',
   'toast.stockUpdated':        'Stock updated',
   'toast.mailOpened':          'Opened an email to {email}',
+  'toast.whatsappOpened':      'Opened WhatsApp with the list',
   'toast.emailUpdated':        'Email address updated',
   'toast.notifyOn':            'Alerts are on',
   'toast.notifyOff':           'Alerts are off',
@@ -558,7 +562,8 @@ const STRINGS = {
   'orders.label.added':          'مُضافة إلى قائمة الطلبات',
   'cart.label.pending':          'لم تُطلب بعد',
   'cart.label.sent':             'تم طلبها',
-  'cart.send':                   'إرسال قائمة الطلبات',
+  'cart.sendEmail':              'إرسال بالبريد الإلكتروني',
+  'cart.sendWhatsapp':           'إرسال عبر واتساب',
 
   /* add / edit medicine form
      'الدواء' للاسم. 'التركيز' ולא 'الجرعة' למינון — זה גם מדויק יותר
@@ -738,8 +743,22 @@ const STRINGS = {
   'order.months.3':            '3 أشهر',
   'order.planPrefix':          'اطلبوا مخزونًا يكفي لمدة',
   'order.planSuffix':          'مقدمًا',
-  'order.qtyWithBoxes':        'الكمية المطلوبة: {boxes} (نحو {pills} وحدة)',
-  'order.qtyUnitsOnly':        'الكمية المطلوبة: نحو {pills} وحدة',
+  /* מספר היחידות כאן עומד לבדו (אחרי נקודתיים או בסוגריים), ולכן נומינטיב:
+     وحدتان. כשהיה לפניו 'نحو' הוא היה בגניטיב — ראו common.approxUnits. */
+  'order.qtyWithBoxes': (v) => `الكمية المطلوبة: ${v.boxes} (${v.pills === 1
+    ? 'وحدة واحدة'
+    : v.pills === 2
+      ? 'وحدتان'
+      : (Number.isInteger(v.pills) && v.pills >= 3 && v.pills <= 10)
+        ? `${v.pills} وحدات`
+        : `${v.pills} وحدة`})`,
+  'order.qtyUnitsOnly': (v) => `الكمية المطلوبة: ${v.pills === 1
+    ? 'وحدة واحدة'
+    : v.pills === 2
+      ? 'وحدتان'
+      : (Number.isInteger(v.pills) && v.pills >= 3 && v.pills <= 10)
+        ? `${v.pills} وحدات`
+        : `${v.pills} وحدة`}`,
   'order.inListRemove':        '✓ في قائمة الطلبات — إزالة',
   'order.add':                 '+ إضافة إلى الطلب',
   'order.sentToday':           'أُرسل اليوم',
@@ -755,8 +774,20 @@ const STRINGS = {
         : `أُرسل قبل ${v.days} يومًا`,
 
   /* רשימת ההזמנות */
-  'cart.qtyWithBoxes':         '{boxes} للطلب (نحو {pills} وحدة)',
-  'cart.qtyUnitsOnly':         'نحو {pills} وحدة للطلب',
+  'cart.qtyWithBoxes': (v) => `${v.boxes} للطلب (${v.pills === 1
+    ? 'وحدة واحدة'
+    : v.pills === 2
+      ? 'وحدتان'
+      : (Number.isInteger(v.pills) && v.pills >= 3 && v.pills <= 10)
+        ? `${v.pills} وحدات`
+        : `${v.pills} وحدة`})`,
+  'cart.qtyUnitsOnly': (v) => `${v.pills === 1
+    ? 'وحدة واحدة'
+    : v.pills === 2
+      ? 'وحدتان'
+      : (Number.isInteger(v.pills) && v.pills >= 3 && v.pills <= 10)
+        ? `${v.pills} وحدات`
+        : `${v.pills} وحدة`} للطلب`,
   'cart.receive':              'وصل الطلب — تحديث المخزون',
   'cart.removeAria':           'إزالة من قائمة الطلبات',
 
@@ -775,14 +806,15 @@ const STRINGS = {
       : (Number.isInteger(v.n) && v.n >= 3 && v.n <= 10)
         ? `${v.n} علب`
         : `${v.n} علبة`,
-  /* 'نحو' גורר גניטיב → وحدتين. */
+  /* בגוף המייל, אחרי נקודתיים — כמו common.boxes, ולכן נומינטיב: وحدتان.
+     (עד נובמבר 2026 היה לפניו 'نحو', שגרר גניטיב → وحدتين.) */
   'common.approxUnits': (v) => v.n === 1
-    ? 'نحو وحدة واحدة'
+    ? 'وحدة واحدة'
     : v.n === 2
-      ? 'نحو وحدتين'
+      ? 'وحدتان'
       : (Number.isInteger(v.n) && v.n >= 3 && v.n <= 10)
-        ? `نحو ${v.n} وحدات`
-        : `نحو ${v.n} وحدة`,
+        ? `${v.n} وحدات`
+        : `${v.n} وحدة`,
 
   /* בדיקת הטופס */
   'validation.name':           'أدخلوا اسمًا',
@@ -797,6 +829,7 @@ const STRINGS = {
   'toast.removedFromOrder':    'أُزيل من قائمة الطلبات',
   'toast.stockUpdated':        'تم تحديث المخزون',
   'toast.mailOpened':          'تم فتح رسالة إلى {email}',
+  'toast.whatsappOpened':      'تم فتح واتساب مع القائمة',
   'toast.emailUpdated':        'تم تحديث عنوان البريد الإلكتروني',
   'toast.notifyOn':            'التنبيهات مشغَّلة',
   'toast.notifyOff':           'التنبيهات معطَّلة',
@@ -921,11 +954,12 @@ const STRINGS = {
   'app.title':                   'Supplever — мой запас',
 
   /* section labels */
-  'orders.label.pending':        'Ещё не в списке заказа',
-  'orders.label.added':          'Уже в списке заказа',
+  'orders.label.pending':        'Ещё не в списке заказов',
+  'orders.label.added':          'Уже в списке заказов',
   'cart.label.pending':          'Заказ ещё не отправлен',
   'cart.label.sent':             'Заказ уже отправлен',
-  'cart.send':                   'Отправить список заказа',
+  'cart.sendEmail':              'Отправить по e-mail',
+  'cart.sendWhatsapp':           'Отправить в WhatsApp',
 
   /* add / edit medicine form */
   'form.name':                   'Название лекарства',
@@ -1036,19 +1070,19 @@ const STRINGS = {
   'order.months.3':            '3 месяца',
   'order.planPrefix':          'Заказать запас на',
   'order.planSuffix':          'вперёд',
-  'order.qtyWithBoxes':        'К заказу: {boxes} (примерно {pills} ед.)',
-  'order.qtyUnitsOnly':        'К заказу: примерно {pills} ед.',
-  'order.inListRemove':        '✓ В списке заказа — убрать',
+  'order.qtyWithBoxes':        'К заказу: {boxes} ({pills} ед.)',
+  'order.qtyUnitsOnly':        'К заказу: {pills} ед.',
+  'order.inListRemove':        '✓ В списке заказов — убрать',
   'order.add':                 '+ Добавить в заказ',
   'order.sentToday':           'Отправлено сегодня',
   'order.sentYesterday':       'Отправлено вчера',
   'order.sentAgo':             'Отправлено {days} дн. назад',
 
   /* список заказа */
-  'cart.qtyWithBoxes':         '{boxes} к заказу (примерно {pills} ед.)',
-  'cart.qtyUnitsOnly':         'примерно {pills} ед. к заказу',
+  'cart.qtyWithBoxes':         '{boxes} к заказу ({pills} ед.)',
+  'cart.qtyUnitsOnly':         '{pills} ед. к заказу',
   'cart.receive':              'Заказ пришёл — обновить запас',
-  'cart.removeAria':           'Убрать из списка заказа',
+  'cart.removeAria':           'Убрать из списка заказов',
 
   /* общее */
   'common.ok':                 'ОК',
@@ -1058,7 +1092,7 @@ const STRINGS = {
   'common.chooseDose':         'Выберите дозировку...',
   'common.doseOther':          'Другая (ввести вручную)',
   'common.boxes': (v) => `${v.n} ${ruPlural(v.n, 'упаковка', 'упаковки', 'упаковок')}`,
-  'common.approxUnits': (v) => `примерно ${v.n} ${ruPlural(v.n, 'единица', 'единицы', 'единиц')}`,
+  'common.approxUnits': (v) => `${v.n} ${ruPlural(v.n, 'единица', 'единицы', 'единиц')}`,
 
   /* проверка формы */
   'validation.name':           'Введите название',
@@ -1069,10 +1103,11 @@ const STRINGS = {
   'toast.medAdded':            'Лекарство добавлено',
   'toast.medUpdated':          'Лекарство обновлено',
   'toast.medDeleted':          'Лекарство удалено',
-  'toast.addedToOrder':        'Добавлено в список заказа',
-  'toast.removedFromOrder':    'Убрано из списка заказа',
+  'toast.addedToOrder':        'Добавлено в список заказов',
+  'toast.removedFromOrder':    'Убрано из списка заказов',
   'toast.stockUpdated':        'Запас обновлён',
   'toast.mailOpened':          'Открыто письмо на {email}',
+  'toast.whatsappOpened':      'Открыт WhatsApp со списком',
   'toast.emailUpdated':        'Адрес email обновлён',
   'toast.notifyOn':            'Оповещения включены',
   'toast.notifyOff':           'Оповещения выключены',
@@ -1101,7 +1136,7 @@ const STRINGS = {
 
   /* системные оповещения */
   'notification.reorderTitle': '{name} — пора заказать',
-  'notification.reorderBody':  'Откройте Supplever, чтобы добавить в список заказа',
+  'notification.reorderBody':  'Откройте Supplever, чтобы добавить в список заказов',
   'notification.singleBody':   'Стоит заказать в ближайшее время — откройте Supplever',
   'notification.multiTitle': (v) => `Нужно заказать ${v.n} ${ruPlural(v.n, 'лекарство', 'лекарства', 'лекарств')}`,
   'notification.bgNativeTitle': 'Даже когда приложение закрыто',

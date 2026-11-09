@@ -1618,6 +1618,57 @@ function handleSendOrderClick() {
 }
 
 document.getElementById('sendOrderBtn').addEventListener('click', handleSendOrderClick);
+
+/* ---------- send order list by WhatsApp ---------- */
+
+/* אותו טקסט של המייל ומאותה פונקציה (cartItemBlock) — שתי גרסאות של אותה
+   רשימה היו נפרדות בשקט אחרי התיקון הראשון שייעשה רק באחת מהן.
+   מה שכן יורד: "שלום רב," ונושא ההודעה. בבועת וואטסאפ אל בן משפחה פתיחה
+   רשמית נקראת מוזר, ולהודעת וואטסאפ אין נושא בכלל. החתימה נשארת — היא
+   מסבירה למי שמקבל את ההודעה מאיפה היא הגיעה. */
+function buildOrderWhatsappText(cartMeds) {
+  const blocks = cartMeds.map(cartItemBlock).join('\n\n');
+  return `${t('email.intro')}\n\n${blocks}\n\n${t('email.signature')}`;
+}
+
+/* בלי מספר טלפון בכתובת — וואטסאפ פותח את בורר אנשי הקשר והמשתמש בוחר למי
+   לשלוח. זה מה שהערוץ הזה עושה והמייל לא: המייל נשלח לכתובת של המשתמש עצמו,
+   ובוואטסאפ אפשר לשלוח לבן משפחה.
+
+   ⚠️ שתי כתובות ולא אחת: בדפדפן `https://wa.me` הוא הנכון (הוא מגלגל הלאה
+   לאפליקציה או ל-web.whatsapp). בתוך אפליקציית Capacitor כתובת https הייתה
+   **נטענת ב-WebView עצמו** ולא נמסרת למערכת, ולכן שם נדרשת הסכמה
+   `whatsapp://` שה-WebView מעביר הלאה למערכת ההפעלה.
+   ⚠️ **הענף הנטיבי טרם נבדק על מכשיר** — ההפצה לחנות עצורה (ראו CLAUDE.md).
+   זה סיכון פתוח לגרסת החנות הבאה, לא לגרסת הווב. */
+function buildOrderWhatsappUrl(cartMeds) {
+  const text = encodeURIComponent(buildOrderWhatsappText(cartMeds));
+  return isNativeApp ? `whatsapp://send?text=${text}` : `https://wa.me/?text=${text}`;
+}
+
+function sendOrderListByWhatsapp(cartMeds) {
+  if (cartMeds.length === 0) return;
+  /* _blank ולא location.href: wa.me הוא **עמוד אמיתי**, ובדפדפן הוא היה
+     מחליף את האפליקציה. mailto: לא עושה את זה, ולכן המייל יכול להרשות
+     לעצמו location.href. בענף הנטיבי הסכמה לא טוענת עמוד, ולכן אין צורך
+     בחלון חדש — ו-window.open ב-WebView פותח חלון ריק שנתקע. */
+  const url = buildOrderWhatsappUrl(cartMeds);
+  if (isNativeApp) window.location.href = url;
+  else window.open(url, '_blank', 'noopener');
+
+  /* מסמנים כנשלחה, בדיוק כמו במייל. גם שם אין לנו דרך לדעת שהמשתמש אכן
+     לחץ "שלח" בתוך וואטסאפ, וזה מקובל — האפליקציה עוקבת אחרי מלאי, לא
+     אחרי מסירה. */
+  const today = todayStr();
+  cartMeds.forEach(med => updateMed(med.id, { orderSentDate: today }));
+  render();
+  showToast(t('toast.whatsappOpened'));
+}
+
+/* בלי חלון קליטת כתובת, בשונה מהמייל — אין מה לקלוט. */
+document.getElementById('sendWhatsappBtn').addEventListener('click', () => {
+  sendOrderListByWhatsapp(medsPendingSend());
+});
 cartActionsEl.addEventListener('click', (e) => {
   if (e.target.closest('#changeEmailBtn')) openEmailModal('edit');
 });

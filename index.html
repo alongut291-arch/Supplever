@@ -155,8 +155,12 @@
     <div id="cartListPending" class="med-list"></div>
 
     <div id="cartActions" class="cart-actions" style="display:none;">
-      <button type="button" id="sendOrderBtn" class="send-order-btn" data-i18n="cart.send">שליחת רשימת ההזמנות</button>
+      <button type="button" id="sendOrderBtn" class="send-order-btn" data-i18n="cart.sendEmail">שליחה במייל</button>
+      <!-- שורת "תישלח אל <כתובת> · שינוי" נוגעת למייל בלבד, ולכן היא יושבת
+           בין שני הכפתורים ולא מתחת לשניהם. -->
       <p id="sendEmailInfo" class="cart-send-info"></p>
+      <!-- וואטסאפ לא צריך שום כתובת: בורר אנשי הקשר נפתח בתוך וואטסאפ. -->
+      <button type="button" id="sendWhatsappBtn" class="send-whatsapp-btn" data-i18n="cart.sendWhatsapp">שליחה בוואטסאפ</button>
     </div>
 
     <p id="cartSentLabel" class="section-label sent" hidden><span data-i18n="cart.label.sent">כבר נשלחה הזמנה</span> <span id="cartSentCount" class="count"></span></p>
