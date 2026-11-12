@@ -1777,6 +1777,36 @@ function buildOrderWhatsappText(cartMeds) {
    `whatsapp://` שה-WebView מעביר הלאה למערכת ההפעלה.
    ⚠️ **הענף הנטיבי טרם נבדק על מכשיר** — ההפצה לחנות עצורה (ראו CLAUDE.md).
    זה סיכון פתוח לגרסת החנות הבאה, לא לגרסת הווב. */
+/* ⚠️ באייפון `https://wa.me/?text=` **בלי מספר טלפון** פותח את וואטסאפ
+   **בלי שום הודעה** — נטו משגר את האפליקציה. דווח ע"י בודקת ב-2026-11-12:
+   הכפתור הוביל לעמוד wa.me, iOS שאל "Open this page in WhatsApp?", וואטסאפ
+   נפתח — וההודעה לא הייתה שם.
+
+   ⚠️ **והתיעוד של וואטסאפ אינו מזכיר את זה בכלל.** הוא מתאר את הצורה הזו
+   ואומר שהיא מציגה "רשימת אנשי קשר שאליהם אפשר לשלוח את ההודעה", בלי שום
+   הסתייגות לפי פלטפורמה. כלומר הצורה שבקוד **נכונה לפי התיעוד**, והאייפון
+   פשוט לא מכבד אותה. אין מה "לתקן" בכתובת.
+
+   ⚠️ **ולמה לא לנסות `whatsapp://send?text=` באייפון:** עמוד wa.me **כבר
+   עשה את זה** — זה בדיוק מה שהשאלה "Open this page in WhatsApp?" מסמנת —
+   ווואטסאפ נפתח ריק בכל זאת. מסלול הכתובות שם מוביל לאותו מקום.
+
+   לכן באייפון עוברים לגלון השיתוף של iOS (`navigator.share`), שהוא מנגנון
+   אחר לגמרי: הטקסט נמסר למערכת ההפעלה, המשתמש בוחר וואטסאפ, ווואטסאפ
+   מקבל אותו כהודעה ופותח את בורר אנשי הקשר. **אותה חוויה שהתכוונו אליה.**
+   המחיר: מופיע גלון עם עוד אפליקציות, ולא קפיצה ישר לוואטסאפ.
+
+   ⚠️ **ואנדרואיד לא נוגע בזה בכוונה.** שם `wa.me` הוא המסלול המתועד והוא
+   ישיר יותר, ואין טעם להחליף מסלול שעובד בגלון שדורש בחירה נוספת. אם יתברר
+   שגם אנדרואיד שותק — התנאי כאן הוא מה שצריך להשתנות, לא שום דבר אחר. */
+const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent)
+  // אייפד מודרני מדווח על עצמו כ-Macintosh. מסך מגע הוא מה שמבדיל
+  || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+
+function useIosShareSheet() {
+  return !isNativeApp && isIOS && typeof navigator.share === 'function';
+}
+
 function buildOrderWhatsappUrl(cartMeds) {
   const text = encodeURIComponent(buildOrderWhatsappText(cartMeds));
   return isNativeApp ? `whatsapp://send?text=${text}` : `https://wa.me/?text=${text}`;
@@ -1788,17 +1818,45 @@ function sendOrderListByWhatsapp(cartMeds) {
      מחליף את האפליקציה. mailto: לא עושה את זה, ולכן המייל יכול להרשות
      לעצמו location.href. בענף הנטיבי הסכמה לא טוענת עמוד, ולכן אין צורך
      בחלון חדש — ו-window.open ב-WebView פותח חלון ריק שנתקע. */
-  const url = buildOrderWhatsappUrl(cartMeds);
-  if (isNativeApp) window.location.href = url;
-  else window.open(url, '_blank', 'noopener');
-
   /* מסמנים כנשלחה, בדיוק כמו במייל. גם שם אין לנו דרך לדעת שהמשתמש אכן
      לחץ "שלח" בתוך וואטסאפ, וזה מקובל — האפליקציה עוקבת אחרי מלאי, לא
      אחרי מסירה. */
-  const today = todayStr();
-  cartMeds.forEach(med => updateMed(med.id, { orderSentDate: today }));
-  render();
-  showToast(t('toast.whatsappOpened'));
+  const markSent = () => {
+    const today = todayStr();
+    cartMeds.forEach(med => updateMed(med.id, { orderSentDate: today }));
+    render();
+    showToast(t('toast.whatsappOpened'));
+  };
+
+  const url = buildOrderWhatsappUrl(cartMeds);
+
+  /* ⚠️ באייפון — גלון השיתוף. ראו את ההערה מעל buildOrderWhatsappUrl. */
+  if (useIosShareSheet()) {
+    navigator.share({ text: buildOrderWhatsappText(cartMeds) })
+      .then(markSent)
+      .catch(err => {
+        /* ⚠️ ביטול הוא לא כשל. המשתמש סגר את הגלון, ולכן הרשימה **נשארת**
+           כפי שהיא — סימון "נשלחה" כאן היה מוחק את הרשימה שהוא עוד צריך. */
+        if (err && err.name === 'AbortError') return;
+        /* כל כשל אחר — נפילה חזרה להתנהגות של שאר הפלטפורמות.
+           ⚠️ location.href ולא window.open: ההבטחה נדחתה, כלומר אין יותר
+           "מחווה טרייה" של המשתמש, ו-iOS חוסם חלון חדש בלעדיה. */
+        window.location.href = url;
+        markSent();
+      });
+    return;
+  }
+
+  /* _blank ולא location.href: wa.me הוא **עמוד אמיתי**, ובדפדפן הוא היה
+     מחליף את האפליקציה. mailto: לא עושה את זה, ולכן המייל יכול להרשות
+     לעצמו location.href. בענף הנטיבי הסכמה לא טוענת עמוד, ולכן אין צורך
+     בחלון חדש — ו-window.open ב-WebView פותח חלון ריק שנתקע. */
+  if (isNativeApp) window.location.href = url;
+  else window.open(url, '_blank', 'noopener');
+
+  /* ⚠️ ובמסלול הזה מסמנים **מיד**, ולא כמו באייפון. בגלון יש לנו הבטחה
+     שאומרת אם המשתמש המשיך או ביטל; בפתיחת כתובת אין שום אות חוזר. */
+  markSent();
 }
 
 /* בלי חלון קליטת כתובת, בשונה מהמייל — אין מה לקלוט. */
